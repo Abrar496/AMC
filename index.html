@@ -346,10 +346,11 @@
 <div id="modal-admission" class="no-print hidden fixed inset-0 z-40 bg-slate-900/50 flex items-center justify-center p-4">
   <div class="bg-white rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-5 space-y-4">
     <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-      <h2 class="text-base font-bold">New Student Admission Form</h2>
+      <h2 id="adm-modal-title" class="text-base font-bold">New Student Admission Form</h2>
       <button data-close="modal-admission" class="text-slate-400 hover:text-slate-700 text-lg font-bold">&times;</button>
     </div>
     <form id="form-admission" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+      <input type="hidden" id="adm-edit-id">
       <div class="sm:col-span-2 flex items-center gap-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
         <img id="adm-photo-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Crect width='64' height='64' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='54%25' text-anchor='middle' font-size='11' fill='%2364748b' font-family='sans-serif'%3EPhoto%3C/text%3E%3C/svg%3E" alt="Preview" class="w-16 h-16 rounded-xl object-cover border border-slate-300">
         <div class="space-y-1">
@@ -814,7 +815,7 @@
           state.pendingAdmissions = data.pendingAdmissions;
         }
         if (Array.isArray(data.students) && data.students.length) {
-          state.students = data.students.map(st => Object.assign({ manualCharges: [], attendance: {} }, st));
+          state.students = data.students.map(st => Object.assign({ manualCharges: [], attendance: {}, photo: st.photoUrl || st.photo || '' }, st));
         }
         saveState();
         renderAll();
@@ -1086,15 +1087,23 @@
               </span>
             </div>
           </div>
-          <div class="text-xs text-slate-600 flex flex-wrap gap-x-4 gap-y-1 border-t border-slate-100 pt-2">
-            <span>${l.isCycle ? `By Day (${l.presentCount}/${l.cycleTarget} Classes): <strong>${l.netFee} BDT</strong>` : `Monthly Fee: <strong>${l.netFee} BDT</strong>${s.scholarship > 0 ? ' (Schol: -' + s.scholarship + ')' : ''}`}</span>
-            <span>Guardian WA: <strong>${s.guardianWa}</strong></span>
+          <div class="text-xs text-slate-600 space-y-1.5 border-t border-slate-100 pt-2">
+            <div>${l.isCycle ? `By Day (${l.presentCount}/${l.cycleTarget} Classes): <strong>${l.netFee} BDT</strong>` : `Monthly Fee: <strong>${l.netFee} BDT</strong>${s.scholarship > 0 ? ' (Schol: -' + s.scholarship + ')' : ''}`}</div>
+            <div class="flex flex-wrap items-center gap-2">
+              <span>Student: <strong>${s.studentWa || '—'}</strong></span>
+              ${s.studentWa ? `<a href="tel:${s.studentWa}" class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold">Call</a><a href="${waUrl(s.studentWa, `Assalamu Alaikum ${s.name}, update from Abrar Math Coaching (${s.id}).`)}" target="_blank" rel="noopener noreferrer" class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-semibold">WA</a>` : ''}
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <span>Guardian: <strong>${s.guardianWa || '—'}</strong></span>
+              ${s.guardianWa ? `<a href="tel:${s.guardianWa}" class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold">Call</a><a href="${waUrl(s.guardianWa, `Assalamu Alaikum, update regarding ${s.name} (${s.id}) from Abrar Math Coaching (${s.branch}). Current status: Attendance ${l.presentCount}P/${l.absentCount}A, Due ${l.due} BDT.`)}" target="_blank" rel="noopener noreferrer" class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-semibold">WA Message</a>` : ''}
+            </div>
           </div>
           <div class="flex flex-wrap gap-2 pt-1">
             <button data-action="admission-pdf" data-id="${s.id}" class="text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-1.5 rounded-lg">Admission PDF</button>
             <button data-action="marksheet-pdf" data-id="${s.id}" class="text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg">Result Marksheet</button>
             <button data-action="monthly-report" data-id="${s.id}" class="text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg">Monthly Performance PDF</button>
             <button data-action="cal-modal" data-id="${s.id}" class="text-xs font-semibold bg-purple-50 hover:bg-purple-100 text-purple-700 px-3 py-1.5 rounded-lg">Calendar (${l.presentCount}P/${l.absentCount}A)</button>
+            <button data-action="edit-student" data-id="${s.id}" class="text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 px-3 py-1.5 rounded-lg">Edit</button>
             <button data-action="delete-student" data-id="${s.id}" class="text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 px-3 py-1.5 rounded-lg">Delete</button>
           </div>
         </div>
@@ -1498,7 +1507,7 @@ ${pdfHeaderHtml("Official Fee Receipt", "")}
         const res = await fetch(url + '?action=studentLogin&guardianWa=' + encodeURIComponent(gPhone));
         const data = await res.json();
         if (data && data.ok && Array.isArray(data.students) && data.students.length) {
-          const liveStudents = data.students.map(st => Object.assign({ manualCharges: [], attendance: {} }, st));
+          const liveStudents = data.students.map(st => Object.assign({ manualCharges: [], attendance: {}, photo: st.photoUrl || st.photo || '' }, st));
           // Attach attendance & manualCharges if returned
           liveStudents.forEach(st => {
             if (Array.isArray(data.attendance)) {
@@ -1614,6 +1623,10 @@ ${pdfHeaderHtml("Official Fee Receipt", "")}
 
   document.getElementById('btn-open-add-student').addEventListener('click', () => {
     pendingPhotoDataUrl = '';
+    document.getElementById('adm-edit-id').value = '';
+    document.getElementById('adm-modal-title').textContent = 'New Student Admission Form';
+    document.getElementById('form-admission').reset();
+    syncSlotDropdowns();
     document.getElementById('modal-admission').classList.remove('hidden');
   });
 
@@ -1630,8 +1643,32 @@ ${pdfHeaderHtml("Official Fee Receipt", "")}
 
   document.getElementById('form-admission').addEventListener('submit', e => {
     e.preventDefault();
+    const editId = document.getElementById('adm-edit-id').value;
     const branch = document.getElementById('adm-branch').value;
     const joining = document.getElementById('adm-joining').value;
+    if (editId) {
+      const stu = state.students.find(x => x.id === editId);
+      if (stu) {
+        stu.name = document.getElementById('adm-name').value.trim();
+        stu.classYear = document.getElementById('adm-class').value;
+        stu.branch = branch;
+        stu.slot = document.getElementById('adm-slot').value;
+        stu.studentWa = document.getElementById('adm-stu-wa').value.trim();
+        stu.guardianWa = document.getElementById('adm-gua-wa').value.trim();
+        stu.email = document.getElementById('adm-email').value.trim();
+        stu.joiningMonth = joining;
+        stu.billingType = document.getElementById('adm-billing').value;
+        stu.monthlyFee = Number(document.getElementById('adm-fee').value) || 0;
+        stu.scholarship = Number(document.getElementById('adm-scholarship').value) || 0;
+        if (pendingPhotoDataUrl) stu.photo = pendingPhotoDataUrl;
+        saveState();
+        pushToSheet({ action: 'updateStudent', student: stu });
+        document.getElementById('modal-admission').classList.add('hidden');
+        renderAll();
+        showToast('Updated ' + stu.name);
+      }
+      return;
+    }
     const newId = nextStudentId(branch, joining);
     state.students.unshift({
       id: newId,
@@ -1741,6 +1778,27 @@ ${pdfHeaderHtml("Official Fee Receipt", "")}
     if (act === 'marksheet-pdf') showResultMarksheetPdf(id);
     if (act === 'monthly-report') showMonthlyPerformancePdf(id);
     if (act === 'cal-modal') showTeacherCalendarModal(id);
+    if (act === 'edit-student') {
+      const stu = state.students.find(x => x.id === id);
+      if (!stu) return;
+      document.getElementById('adm-edit-id').value = stu.id;
+      document.getElementById('adm-modal-title').textContent = 'Edit Student — ' + stu.id;
+      document.getElementById('adm-name').value = stu.name || '';
+      document.getElementById('adm-class').value = stu.classYear || 'HSC 1st Year';
+      document.getElementById('adm-branch').value = stu.branch || 'GEC';
+      syncSlotDropdowns();
+      document.getElementById('adm-slot').value = stu.slot || 'Slot A';
+      document.getElementById('adm-joining').value = stu.joiningMonth || '2026-11';
+      document.getElementById('adm-stu-wa').value = stu.studentWa || '';
+      document.getElementById('adm-gua-wa').value = stu.guardianWa || '';
+      document.getElementById('adm-email').value = stu.email || '';
+      document.getElementById('adm-billing').value = stu.billingType || 'monthly';
+      document.getElementById('adm-fee').value = stu.monthlyFee || 0;
+      document.getElementById('adm-scholarship').value = stu.scholarship || 0;
+      pendingPhotoDataUrl = stu.photo || '';
+      if (stu.photo) document.getElementById('adm-photo-preview').src = stu.photo;
+      document.getElementById('modal-admission').classList.remove('hidden');
+    }
     if (act === 'delete-student') {
       const stu = state.students.find(x => x.id === id);
       if (!stu) return;
