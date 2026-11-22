@@ -1471,6 +1471,7 @@ ${pdfHeaderHtml("Official Fee Receipt", "")}
   function normPhone(p) {
     let d = String(p || '').replace(/\D/g, '');
     if (d.startsWith('880')) d = '0' + d.slice(3);
+    if (d.length === 10 && d.startsWith('1')) d = '0' + d;
     return d;
   }
 
@@ -1488,10 +1489,51 @@ ${pdfHeaderHtml("Official Fee Receipt", "")}
     document.getElementById('login-tab-student').className = 'py-2 rounded-lg text-xs font-semibold text-slate-600';
   });
 
-  document.getElementById('form-student-login').addEventListener('submit', e => {
+  document.getElementById('form-student-login').addEventListener('submit', async e => {
     e.preventDefault();
     const gPhone = normPhone(document.getElementById('login-guardian-wa').value);
-    const match = state.students.find(s => normPhone(s.guardianWa) === gPhone);
+    let match = state.students.find(s => normPhone(s.guardianWa) === gPhone);
+
+    const url = (state.config && state.config.scriptUrl) || '';
+    if (url) {
+      try {
+        showToast('Checking student record...');
+        const res = await fetch(url + '?action=studentLogin&guardianWa=' + encodeURIComponent(gPhone));
+        const data = await res.json();
+        if (data && data.ok && Array.isArray(data.students) && data.students.length) {
+          const liveStudents = data.students.map(st => Object.assign({ manualCharges: [], attendance: {} }, st));
+          // Attach attendance & manualCharges if returned
+          liveStudents.forEach(st => {
+            if (Array.isArray(data.attendance)) {
+              data.attendance.filter(a => String(a.studentId) === String(st.id)).forEach(a => {
+                const dtStr = String(a.date || '').slice(0, 10);
+                if (dtStr) st.attendance[dtStr] = a.status;
+              });
+            }
+            if (Array.isArray(data.manualCharges)) {
+              st.manualCharges = data.manualCharges
+                .filter(c => String(c.studentId) === String(st.id))
+                .map(c => ({ title: c.title, amount: Number(c.amount) || 0 }));
+            }
+          });
+          state.students = liveStudents;
+          if (Array.isArray(data.exams) && data.exams.length) {
+            state.exams = data.exams.map(ex => {
+              const scMap = {};
+              if (Array.isArray(data.scores)) {
+                data.scores.filter(sc => String(sc.examId) === String(ex.examId || ex.id)).forEach(sc => {
+                  scMap[sc.studentId] = { cq: sc.cq || 0, mcq: sc.mcq || 0, prac: sc.prac || 0 };
+                });
+              }
+              return Object.assign({ id: ex.examId || ex.id, scores: scMap }, ex);
+            });
+          }
+          saveState();
+          match = state.students[0];
+        }
+      } catch (_) {}
+    }
+
     if (!match) {
       showToast('Guardian WhatsApp number not found');
       return;
