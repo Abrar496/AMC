@@ -1,0 +1,1887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Abrar Math Coaching — Teacher &amp; Student WebView Portal</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  @media print {
+    .no-print { display: none !important; }
+    body { background: #fff !important; padding: 0 !important; }
+    #print-sheet { display: block !important; box-shadow: none !important; border: none !important; margin: 0 !important; padding: 16px !important; }
+  }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen">
+
+<!-- Toast -->
+<div id="toast" class="no-print fixed bottom-4 right-4 z-50 hidden bg-slate-900 text-white text-sm px-4 py-3 rounded-xl shadow-lg max-w-sm"></div>
+
+<!-- Top Navigation Bar -->
+<header class="no-print sticky top-0 z-30 bg-white border-b border-slate-200">
+  <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm">AMC</div>
+      <div>
+        <h1 class="text-base font-bold leading-tight text-slate-900">Abrar Math Coaching</h1>
+        <p class="text-xs font-medium text-slate-700">Md. Nurul Abrar &bull; Lecturer (Mathematics), Ispahani Public School &amp; College, Chittagong</p>
+        <p class="text-xs text-slate-500">GEC &bull; Chawkbazar &bull; Mobile: <a href="tel:01616397272" class="font-semibold text-blue-700 hover:underline">01616397272</a></p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <span id="active-user-badge" class="hidden text-xs font-semibold bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg"></span>
+      <button id="btn-logout" class="hidden px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">Sign Out</button>
+    </div>
+  </div>
+</header>
+
+<!-- AUTO INSTALL APP BANNER -->
+<div id="install-app-banner" class="no-print bg-blue-600 text-white px-4 py-2.5 text-xs">
+  <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2">
+    <div class="flex items-center gap-2">
+      <span class="font-bold">Get the Android App:</span>
+      <span>Install Abrar Math Coaching for 12-hour exam alarms &amp; faster access.</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="btn-install-app" class="bg-white text-blue-700 font-bold px-3 py-1 rounded-lg hover:bg-blue-50">Install App</button>
+      <button id="btn-dismiss-install" class="text-blue-100 hover:text-white px-2 py-1 font-bold">&times;</button>
+    </div>
+  </div>
+</div>
+
+<!-- TEACHER / ADMIN VIEW -->
+<!-- LOGIN VIEW -->
+<main id="login-view" class="no-print max-w-md mx-auto px-4 py-10">
+  <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-5">
+    <div class="text-center space-y-1">
+      <h2 class="text-lg font-bold text-slate-900">Sign In to Portal</h2>
+      <p class="text-xs text-slate-500">Students use Guardian WhatsApp; Teachers use Mobile &amp; Password</p>
+    </div>
+    <div class="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-xl">
+      <button id="login-tab-student" class="py-2 rounded-lg text-xs font-semibold bg-white text-blue-700 shadow-sm">Student Login</button>
+      <button id="login-tab-teacher" class="py-2 rounded-lg text-xs font-semibold text-slate-600">Teacher Login</button>
+    </div>
+
+    <form id="form-student-login" class="space-y-3 text-xs">
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Guardian WhatsApp Number</label>
+        <input id="login-guardian-wa" type="tel" required placeholder="e.g. 01812001122" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm">
+      </div>
+      <p class="text-[11px] text-slate-500">Demo numbers: <span class="mono">01812001122</span>, <span class="mono">01711334455</span>, <span class="mono">01811445566</span></p>
+      <button type="submit" class="w-full py-2.5 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700">Open Student Portal</button>
+    </form>
+
+    <form id="form-teacher-login" class="hidden space-y-3 text-xs">
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Teacher Mobile Number</label>
+        <input id="login-teacher-mobile" type="tel" required value="01616397272" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm">
+      </div>
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Password</label>
+        <input id="login-teacher-pass" type="password" required placeholder="Enter password (demo: abrar2026)" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm">
+      </div>
+      <button type="submit" class="w-full py-2.5 rounded-xl bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800">Open Teacher Admin</button>
+    </form>
+  </div>
+</main>
+
+<!-- TEACHER / ADMIN VIEW -->
+<main id="teacher-view" class="no-print hidden max-w-6xl mx-auto px-4 py-5 space-y-5">
+
+  <!-- Global Context Filter + Apps Script Config -->
+  <section class="bg-white border border-slate-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex flex-wrap items-center gap-2">
+      <select id="filter-branch" class="text-xs font-medium bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+        <option value="ALL">All Branches &amp; Home Tuition</option>
+        <option value="GEC">GEC (Jahanara Mansion)</option>
+        <option value="Chawkbazar">Chawkbazar (KB Plaza)</option>
+        <option value="Home Tuition">Home Tuition</option>
+      </select>
+      <select id="filter-class" class="text-xs font-medium bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+        <option value="ALL">All Classes</option>
+        <option value="HSC 1st Year">HSC 1st Year</option>
+        <option value="HSC 2nd Year">HSC 2nd Year</option>
+      </select>
+      <select id="filter-slot" class="text-xs font-medium bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+        <option value="ALL">All Slots</option>
+        <option value="Slot A">Slot A (Sat/Mon/Wed)</option>
+        <option value="Slot B">Slot B (Sun/Tue/Thu)</option>
+      </select>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="btn-sync-sheet" class="text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-2 rounded-lg hover:bg-emerald-100">
+        Sync Sheet
+      </button>
+      <button id="btn-open-pending" class="text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 px-3 py-2 rounded-lg hover:bg-amber-100">
+        Pending Form Sync (<span id="pending-count">0</span>)
+      </button>
+      <button id="btn-open-settings" class="text-xs font-semibold bg-slate-100 text-slate-700 px-3 py-2 rounded-lg hover:bg-slate-200">
+        Slot &amp; Fine Settings
+      </button>
+      <button id="btn-open-form-qr" class="text-xs font-semibold bg-slate-100 text-slate-700 px-3 py-2 rounded-lg hover:bg-slate-200">
+        Admission QR &amp; Sync
+      </button>
+      <button id="btn-open-add-student" class="text-xs font-semibold bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700">
+        + New Admission
+      </button>
+    </div>
+  </section>
+
+  <!-- Summary KPIs -->
+  <section class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div class="bg-white border border-slate-200 rounded-2xl p-4">
+      <p class="text-xs text-slate-500">Active Students</p>
+      <p id="kpi-students" class="text-2xl font-bold text-slate-900 mt-1">0</p>
+    </div>
+    <div class="bg-white border border-slate-200 rounded-2xl p-4">
+      <p class="text-xs text-slate-500">Absent Today</p>
+      <p id="kpi-absent" class="text-2xl font-bold text-rose-600 mt-1">0</p>
+    </div>
+    <div class="bg-white border border-slate-200 rounded-2xl p-4">
+      <p class="text-xs text-slate-500">Total Dues (BDT)</p>
+      <p id="kpi-dues" class="text-2xl font-bold text-amber-700 mt-1">0</p>
+    </div>
+    <div class="bg-white border border-slate-200 rounded-2xl p-4">
+      <p class="text-xs text-slate-500">Collected (BDT)</p>
+      <p id="kpi-collected" class="text-2xl font-bold text-emerald-700 mt-1">0</p>
+    </div>
+  </section>
+
+  <!-- Teacher Sub-Tabs -->
+  <nav class="flex gap-2 overflow-x-auto pb-1">
+    <button data-tab="students" class="t-tab px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-white whitespace-nowrap">Students &amp; Reports</button>
+    <button data-tab="attendance" class="t-tab px-4 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 whitespace-nowrap">Attendance</button>
+    <button data-tab="fees" class="t-tab px-4 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 whitespace-nowrap">Fees, Manual Charges &amp; Receipts</button>
+    <button data-tab="exams" class="t-tab px-4 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 whitespace-nowrap">Exams &amp; Input Marks</button>
+  </nav>
+
+  <!-- TAB: STUDENTS & REPORTS -->
+  <section id="tab-students" class="t-panel space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <input id="search-student" type="text" placeholder="Search by Student ID, name, or WhatsApp..." class="w-full sm:w-80 text-sm bg-white border border-slate-200 rounded-xl px-3.5 py-2">
+      <p class="text-xs text-slate-500">Auto-generated IDs (no roll numbers) &bull; Click any student for Admission PDF, Marksheet, or Monthly Report</p>
+    </div>
+    <div id="students-list" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+  </section>
+
+  <!-- TAB: ATTENDANCE -->
+  <section id="tab-attendance" class="t-panel hidden space-y-3">
+    <div class="bg-white border border-slate-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <label class="text-xs font-semibold text-slate-600">Date</label>
+        <input id="att-date" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50">
+        <input id="att-search" type="text" placeholder="Search student ID, name, or WA..." class="text-xs border border-slate-200 rounded-lg px-3 py-1.5 bg-white w-52">
+      </div>
+      <p class="text-xs text-slate-600">Absent fines are <strong>manual</strong>—enter any fine amount (BDT) beside the student when needed.</p>
+    </div>
+    <div id="attendance-list" class="space-y-2"></div>
+  </section>
+
+  <!-- TAB: FEES & MANUAL CHARGES -->
+  <section id="tab-fees" class="t-panel hidden space-y-3">
+    <div class="bg-white border border-slate-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 class="text-sm font-bold text-slate-900">Monthly Fee Ledger &amp; Manual Charges</h2>
+        <p class="text-xs text-slate-500">Previous Due + Net Fee (Base &minus; Scholarship) + 50 BDT Fines + Manual Charges</p>
+      </div>
+      <select id="fee-filter-status" class="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-slate-50">
+        <option value="ALL">All Statuses</option>
+        <option value="DUE">Due / Partial</option>
+        <option value="PAID">Paid</option>
+      </select>
+    </div>
+    <div id="fees-list" class="space-y-3"></div>
+  </section>
+
+  <!-- TAB: EXAMS & 12H ALERTS -->
+  <section id="tab-exams" class="t-panel hidden space-y-4">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <!-- Post Exam Alert / Notice -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
+        <h2 class="text-sm font-bold text-slate-900">Post Exam Alert &amp; 12-Hour Student Alarm</h2>
+        <p class="text-xs text-slate-500">Posted exams appear immediately in the Student View and schedule a 12-hour pre-exam alarm.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <select id="ex-class" class="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-slate-50">
+            <option value="HSC 1st Year">HSC 1st Year</option>
+            <option value="HSC 2nd Year">HSC 2nd Year</option>
+          </select>
+          <select id="ex-type" class="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-slate-50">
+            <option value="Class Test (CQ)">Class Test (CQ)</option>
+            <option value="Class Test (MCQ)">Class Test (MCQ)</option>
+            <option value="Class Test (CQ & MCQ)">Class Test (CQ &amp; MCQ)</option>
+            <option value="Final Test">Final Test (CQ + MCQ + Practical)</option>
+          </select>
+          <input id="ex-title" type="text" placeholder="Auto: Class Test 1 (add topic if needed)" class="sm:col-span-2 text-xs border border-slate-200 rounded-lg px-3 py-2 font-medium">
+          <input id="ex-datetime" type="datetime-local" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
+          <select id="ex-branch" class="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-slate-50">
+            <option value="GEC">GEC</option>
+            <option value="Chawkbazar">Chawkbazar</option>
+            <option value="Home Tuition">Home Tuition</option>
+            <option value="ALL">All Branches</option>
+          </select>
+          <select id="ex-slot" class="sm:col-span-2 text-xs border border-slate-200 rounded-lg px-3 py-2 bg-slate-50">
+            <option value="Slot A">Slot A (Sat/Mon/Wed)</option>
+            <option value="Slot B">Slot B (Sun/Tue/Thu)</option>
+            <option value="ALL">All Slots</option>
+          </select>
+          <div class="sm:col-span-2 grid grid-cols-3 gap-2">
+            <div id="wrap-cq-max">
+              <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">CQ Max</label>
+              <input id="ex-cq-max" type="number" min="0" placeholder="Enter CQ" class="w-full text-xs border border-slate-200 rounded-lg px-2.5 py-2">
+            </div>
+            <div id="wrap-mcq-max" class="hidden">
+              <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">MCQ Max</label>
+              <input id="ex-mcq-max" type="number" min="0" placeholder="Enter MCQ" class="w-full text-xs border border-slate-200 rounded-lg px-2.5 py-2">
+            </div>
+            <div id="wrap-prac-max" class="hidden">
+              <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Prac Max</label>
+              <input id="ex-prac-max" type="number" min="0" placeholder="Enter Prac" class="w-full text-xs border border-slate-200 rounded-lg px-2.5 py-2">
+            </div>
+          </div>
+          <input id="ex-syllabus" type="text" placeholder="Syllabus / Notice note" class="sm:col-span-2 text-xs border border-slate-200 rounded-lg px-3 py-2">
+        </div>
+        <button id="btn-post-exam" class="w-full text-xs font-semibold bg-blue-600 text-white py-2.5 rounded-xl hover:bg-blue-700">Publish Exam &amp; Set 12h Student Alarm</button>
+      </div>
+
+      <!-- Enter Marks -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
+        <div class="flex items-center justify-between gap-2">
+          <h2 class="text-sm font-bold text-slate-900">Class Test &amp; Exam Marks Entry</h2>
+          <select id="select-exam-marks" class="text-xs border border-slate-200 rounded-lg px-2.5 py-1.5 bg-slate-50 max-w-[200px]"></select>
+        </div>
+        <div id="marks-entry-list" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- STUDENT VIEW -->
+<main id="student-view" class="no-print hidden max-w-3xl mx-auto px-4 py-6 space-y-5">
+  <section class="bg-white border border-slate-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <p class="text-xs text-slate-500">Logged in as Student</p>
+      <select id="student-portal-select" class="mt-1 text-sm font-bold text-slate-900 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2"></select>
+    </div>
+    <div class="flex gap-2">
+      <button id="btn-stu-admission-pdf" class="text-xs font-semibold bg-slate-100 text-slate-700 px-3 py-2 rounded-lg hover:bg-slate-200">My Admission PDF</button>
+      <button id="btn-stu-marksheet-pdf" class="text-xs font-semibold bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700">My Result Marksheet</button>
+    </div>
+  </section>
+
+  <!-- 12-Hour Exam Alarm Banner -->
+  <section class="bg-blue-50 border border-blue-200 rounded-2xl p-4 space-y-2">
+    <div class="flex items-center justify-between gap-2">
+      <h2 class="text-sm font-bold text-blue-900">Upcoming Exam Alerts &amp; 12-Hour Auto-Alarm</h2>
+      <span class="mono text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">ALARM ARMED</span>
+    </div>
+    <div id="student-alarms-list" class="space-y-2"></div>
+  </section>
+
+  <!-- Student KPIs -->
+  <section id="student-summary-cards" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></section>
+
+  <!-- Current Month Absent Calendar -->
+  <section class="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
+    <div class="flex items-center justify-between gap-2">
+      <h2 id="student-cal-title" class="text-sm font-bold text-slate-900">Current Month Attendance Calendar</h2>
+      <div class="flex gap-2 text-[11px] font-semibold">
+        <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">P</span>
+        <span class="px-2 py-0.5 rounded bg-rose-100 text-rose-800">A (Absent)</span>
+        <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800">L</span>
+      </div>
+    </div>
+    <div id="student-cal-grid" class="grid grid-cols-7 gap-1.5 text-center text-xs"></div>
+  </section>
+
+  <!-- Student Marks & Ledger -->
+  <section class="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
+    <h2 class="text-sm font-bold text-slate-900">My Exam Scores</h2>
+    <div id="student-marks-list" class="space-y-2"></div>
+  </section>
+
+  <section class="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
+    <h2 class="text-sm font-bold text-slate-900">My Monthly Fee &amp; Charges Breakdown</h2>
+    <div id="student-fee-detail" class="text-sm text-slate-700 space-y-1"></div>
+  </section>
+</main>
+
+<!-- MODAL: NEW ADMISSION FORM -->
+<div id="modal-admission" class="no-print hidden fixed inset-0 z-40 bg-slate-900/50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-5 space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <h2 class="text-base font-bold">New Student Admission Form</h2>
+      <button data-close="modal-admission" class="text-slate-400 hover:text-slate-700 text-lg font-bold">&times;</button>
+    </div>
+    <form id="form-admission" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+      <div class="sm:col-span-2 flex items-center gap-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
+        <img id="adm-photo-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Crect width='64' height='64' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='54%25' text-anchor='middle' font-size='11' fill='%2364748b' font-family='sans-serif'%3EPhoto%3C/text%3E%3C/svg%3E" alt="Preview" class="w-16 h-16 rounded-xl object-cover border border-slate-300">
+        <div class="space-y-1">
+          <label class="block font-semibold text-slate-700">Student Photo</label>
+          <input id="adm-photo" type="file" accept="image/*" class="text-xs">
+        </div>
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block font-semibold text-slate-700 mb-1">Student Full Name *</label>
+        <input id="adm-name" required type="text" placeholder="e.g. Tanvir Ahmed" class="w-full border border-slate-200 rounded-lg px-3 py-2">
+      </div>
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Class *</label>
+        <select id="adm-class" class="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white">
+          <option value="HSC 1st Year">HSC 1st Year</option>
+          <option value="HSC 2nd Year">HSC 2nd Year</option>
+        </select>
+      </div>
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Branch *</label>
+        <select id="adm-branch" class="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white">
+          <option value="GEC">GEC (Jahanara Mansion)</option>
+          <option value="Chawkbazar">Chawkbazar (KB Plaza)</option>
+          <option value="Home Tuition">Home Tuition (No Batch)</option>
+        </select>
+      </div>
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Batch Slot *</label>
+        <select id="adm-slot" class="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white">
+          <option value="Slot A">Slot A (Sat/Mon/Wed)</option>
+          <option value="Slot B">Slot B (Sun/Tue/Thu)</option>
+        </select>
+      </div>
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Joining Month *</label>
+        <input id="adm-joining" required type="month" value="2026-11" class="w-full border border-slate-200 rounded-lg px-3 py-2">
+      </div>
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Student WhatsApp *</label>
+        <input id="adm-stu-wa" required type="tel" placeholder="017XXXXXXXX" class="w-full border border-slate-200 rounded-lg px-3 py-2">
+      </div>
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Guardian WhatsApp *</label>
+        <input id="adm-gua-wa" required type="tel" placeholder="018XXXXXXXX" class="w-full border border-slate-200 rounded-lg px-3 py-2">
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block font-semibold text-slate-700 mb-1">Email</label>
+        <input id="adm-email" type="email" placeholder="student@example.com" class="w-full border border-slate-200 rounded-lg px-3 py-2">
+      </div>
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Billing Schedule *</label>
+        <select id="adm-billing" class="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white">
+          <option value="monthly">Monthly</option>
+          <option value="cycle_8">By Day (8 Classes)</option>
+          <option value="cycle_10">By Day (10 Classes)</option>
+          <option value="cycle_12">By Day (12 Classes)</option>
+        </select>
+      </div>
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Tuition Fee (BDT) *</label>
+        <input id="adm-fee" required type="number" value="1500" class="w-full border border-slate-200 rounded-lg px-3 py-2">
+      </div>
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Scholarship / Discount (BDT)</label>
+        <input id="adm-scholarship" type="number" value="0" class="w-full border border-slate-200 rounded-lg px-3 py-2">
+      </div>
+      <div class="sm:col-span-2 pt-2 flex justify-end gap-2">
+        <button type="button" data-close="modal-admission" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-semibold">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700">Save &amp; Generate Student ID</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: PENDING GOOGLE FORM ADMISSIONS -->
+<div id="modal-pending" class="no-print hidden fixed inset-0 z-40 bg-slate-900/50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-5 space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <div>
+        <h2 class="text-base font-bold">Pending Google Form Admissions</h2>
+        <p class="text-xs text-slate-500">Set Monthly Fee &amp; Scholarship, then tap Approve to auto-generate Student ID</p>
+      </div>
+      <button data-close="modal-pending" class="text-slate-400 hover:text-slate-700 text-lg font-bold">&times;</button>
+    </div>
+    <div id="pending-list" class="space-y-3"></div>
+  </div>
+</div>
+
+<!-- MODAL: FORM QR & APPS SCRIPT SYNC -->
+<div id="modal-qr" class="no-print hidden fixed inset-0 z-40 bg-slate-900/50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl max-w-md w-full p-5 space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <h2 class="text-base font-bold">Admission Google Form QR &amp; Sync</h2>
+      <button data-close="modal-qr" class="text-slate-400 hover:text-slate-700 text-lg font-bold">&times;</button>
+    </div>
+    <div class="space-y-3 text-xs">
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Google Form Admission Link</label>
+        <input id="cfg-form-url" type="url" value="https://docs.google.com/forms/d/e/abrar-math-admission/viewform" class="w-full border border-slate-200 rounded-lg px-3 py-2">
+      </div>
+      <div class="flex flex-col items-center bg-slate-50 border border-slate-200 rounded-xl p-4">
+        <div id="form-qr-box" class="bg-white p-2 rounded-lg border border-slate-200"></div>
+        <p class="text-xs text-slate-500 mt-2 text-center">Share or print this QR at GEC &amp; Chawkbazar desks for student self-registration</p>
+      </div>
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Google Apps Script /exec Sync URL</label>
+        <input id="cfg-script-url" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full border border-slate-200 rounded-lg px-3 py-2">
+      </div>
+      <div class="flex justify-end gap-2 pt-1">
+        <button id="btn-save-cfg" class="px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold">Save &amp; Refresh QR</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: MANUAL CHARGE -->
+<div id="modal-charge" class="no-print hidden fixed inset-0 z-40 bg-slate-900/50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl max-w-sm w-full p-5 space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+      <h2 class="text-base font-bold">Add Manual Charge</h2>
+      <button data-close="modal-charge" class="text-slate-400 hover:text-slate-700 text-lg font-bold">&times;</button>
+    </div>
+    <form id="form-charge" class="space-y-3 text-xs">
+      <input type="hidden" id="chg-stu-id">
+      <p id="chg-stu-label" class="font-semibold text-slate-700"></p>
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Charge Title *</label>
+        <input id="chg-title" required type="text" placeholder="e.g. Ch. 1B Printed Note / Model Test" class="w-full border border-slate-200 rounded-lg px-3 py-2">
+      </div>
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Amount (BDT) *</label>
+        <input id="chg-amount" required type="number" value="100" class="w-full border border-slate-200 rounded-lg px-3 py-2">
+      </div>
+      <div class="flex justify-end gap-2">
+        <button type="button" data-close="modal-charge" class="px-3 py-2 rounded-lg bg-slate-100 font-semibold">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold">Add Charge</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: COLLECT PAYMENT -->
+<div id="modal-pay" class="no-print hidden fixed inset-0 z-40 bg-slate-900/50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl max-w-sm w-full p-5 space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+      <h2 class="text-base font-bold">Collect Payment &amp; Send Receipt</h2>
+      <button data-close="modal-pay" class="text-slate-400 hover:text-slate-700 text-lg font-bold">&times;</button>
+    </div>
+    <form id="form-pay" class="space-y-3 text-xs">
+      <input type="hidden" id="pay-stu-id">
+      <p id="pay-stu-label" class="font-semibold text-slate-800"></p>
+      <div id="pay-breakdown" class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1 text-slate-600"></div>
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Amount Collected Now (BDT) *</label>
+        <input id="pay-amount" required type="number" class="w-full border border-slate-200 rounded-lg px-3 py-2 font-bold">
+      </div>
+      <div class="flex justify-end gap-2">
+        <button type="button" data-close="modal-pay" class="px-3 py-2 rounded-lg bg-slate-100 font-semibold">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold">Confirm &amp; Open WA Receipt</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: SLOT & CENTRAL FINE SETTINGS -->
+<div id="modal-settings" class="no-print hidden fixed inset-0 z-40 bg-slate-900/50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-5 space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <h2 class="text-base font-bold">Manual Slot &amp; Central Fine Settings</h2>
+      <button data-close="modal-settings" class="text-slate-400 hover:text-slate-700 text-lg font-bold">&times;</button>
+    </div>
+    <div class="space-y-4 text-xs">
+      <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
+        <label class="block font-bold text-slate-800">Central Default Absent Fine (BDT / day)</label>
+        <div class="flex gap-2">
+          <input id="cfg-absent-fine" type="number" min="0" value="50" class="w-28 border border-slate-200 rounded-lg px-3 py-1.5 bg-white font-semibold">
+          <button id="btn-save-fine-cfg" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white font-semibold">Save Default Fine</button>
+        </div>
+      </div>
+      <div class="space-y-2">
+        <h3 class="font-bold text-slate-800">Coaching Batch Slots (GEC &amp; Chawkbazar)</h3>
+        <div id="custom-slots-list" class="space-y-1.5"></div>
+        <form id="form-add-slot" class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-100">
+          <input id="slot-name" required type="text" placeholder="Name (e.g. Special Batch)" class="border border-slate-200 rounded-lg px-2.5 py-1.5">
+          <input id="slot-days" required type="text" placeholder="Days (e.g. Fri &amp; Sat)" class="border border-slate-200 rounded-lg px-2.5 py-1.5">
+          <input id="slot-time" required type="text" placeholder="Time (e.g. 4:00 PM)" class="border border-slate-200 rounded-lg px-2.5 py-1.5">
+          <button type="submit" class="sm:col-span-3 py-2 rounded-lg bg-slate-900 text-white font-semibold">+ Add Coaching Slot</button>
+        </form>
+      </div>
+      <div class="space-y-2 pt-3 border-t border-slate-200">
+        <h3 class="font-bold text-slate-800">Home Tuitions (Time &amp; Location)</h3>
+        <div id="home-tuitions-list" class="space-y-1.5"></div>
+        <form id="form-add-ht" class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-slate-100">
+          <input id="ht-name" required type="text" placeholder="Name (e.g. Tuition 3)" class="border border-slate-200 rounded-lg px-2.5 py-1.5">
+          <input id="ht-days" required type="text" placeholder="Days (e.g. Sun, Tue, Thu)" class="border border-slate-200 rounded-lg px-2.5 py-1.5">
+          <input id="ht-time" required type="text" placeholder="Time (e.g. 7:00 PM)" class="border border-slate-200 rounded-lg px-2.5 py-1.5">
+          <input id="ht-loc" required type="text" placeholder="Location (e.g. Nasirabad Rd 3)" class="border border-slate-200 rounded-lg px-2.5 py-1.5">
+          <button type="submit" class="sm:col-span-2 py-2 rounded-lg bg-blue-600 text-white font-semibold">+ Add Home Tuition</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: INSTALL APP -->
+<div id="modal-install" class="no-print hidden fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl max-w-sm w-full p-5 space-y-3 text-xs">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+      <h2 class="text-base font-bold">Install Abrar Math Coaching App</h2>
+      <button data-close="modal-install" class="text-slate-400 hover:text-slate-700 text-lg font-bold">&times;</button>
+    </div>
+    <p class="text-slate-600">Install the Android app for automatic 12-hour exam alarms, offline PDF printing, and direct WhatsApp sharing.</p>
+    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1 text-slate-700">
+      <p><strong>Android:</strong> Tap browser menu (&vellip;) &rarr; <em>Add to Home screen</em> or install the coaching APK.</p>
+      <p><strong>iPhone / iPad:</strong> Tap Share &rarr; <em>Add to Home Screen</em>.</p>
+    </div>
+    <div class="flex justify-end">
+      <button data-close="modal-install" class="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold">Got It</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRINTABLE / PDF PREVIEW MODAL -->
+<div id="modal-print" class="hidden fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[92vh] overflow-y-auto p-6 space-y-4">
+    <div class="no-print flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3">
+      <h2 id="print-modal-title" class="text-base font-bold">Document Preview</h2>
+      <div class="flex gap-2">
+        <a id="btn-print-wa" target="_blank" rel="noopener noreferrer" class="hidden px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-semibold">Share on Guardian WhatsApp</a>
+        <button id="btn-do-print" class="px-4 py-2 rounded-lg bg-blue-600 text-white text-xs font-semibold">Print / Save PDF</button>
+        <button data-close="modal-print" class="px-3 py-2 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold">Close</button>
+      </div>
+    </div>
+    <div id="print-sheet" class="bg-white text-slate-900 p-4 border border-slate-200 rounded-xl"></div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const STORAGE_KEY = 'amc_portal_state_v1';
+
+  const defaultState = {
+    config: {
+      formUrl: 'https://docs.google.com/forms/d/e/abrar-math-admission/viewform',
+      scriptUrl: 'https://script.google.com/macros/s/AKfycbxXZO9t4kxhhxybQP42hFE4IL9zGWckqmqwBzMq3_2FaEQAAtBitQkM5ivyJWt0DKr6gA/exec',
+      defaultAbsentFine: 50,
+      slots: [
+        { name: 'Slot A', days: 'Sat, Mon, Wed', time: '3:30 PM' },
+        { name: 'Slot B', days: 'Sun, Tue, Thu', time: '3:30 PM' },
+        { name: 'Special Batch', days: 'Friday', time: '9:00 AM' }
+      ],
+      homeTuitions: [
+        { name: 'Tuition 1', days: 'Sun, Tue, Thu', time: '7:00 PM', location: 'Nasirabad Housing' },
+        { name: 'Tuition 2', days: 'Sat, Mon, Wed', time: '8:15 PM', location: 'Khulshi Rd 2' }
+      ]
+    },
+    pendingAdmissions: [
+      {
+        tempId: 'PEND-1',
+        name: 'Rafiqul Islam',
+        classYear: 'HSC 1st Year',
+        branch: 'GEC',
+        slot: 'Slot A',
+        studentWa: '01711223344',
+        guardianWa: '01811223344',
+        email: 'rafiq.hsc@gmail.com',
+        joiningMonth: '2026-11',
+        photo: ''
+      }
+    ],
+    students: [
+      {
+        id: 'AMC-GEC-26-001',
+        name: 'Farhan Sadik',
+        classYear: 'HSC 1st Year',
+        branch: 'GEC',
+        slot: 'Slot A',
+        studentWa: '01712001122',
+        guardianWa: '01812001122',
+        email: 'farhan.gec@gmail.com',
+        joiningMonth: '2026-10',
+        monthlyFee: 1500,
+        scholarship: 200,
+        previousDue: 0,
+        paidCurrent: 1300,
+        photo: '',
+        manualAbsentFine: 0,
+        manualCharges: [
+          { title: 'Ch. 1B Determinants Printed Note', amount: 100 }
+        ],
+        attendance: { '2026-11-18': 'P', '2026-11-21': 'P' }
+      },
+      {
+        id: 'AMC-CBZ-26-002',
+        name: 'Nusrat Jahan',
+        classYear: 'HSC 2nd Year',
+        branch: 'Chawkbazar',
+        slot: 'Slot B',
+        studentWa: '01911334455',
+        guardianWa: '01711334455',
+        email: 'nusrat.cbz@gmail.com',
+        joiningMonth: '2026-09',
+        monthlyFee: 1500,
+        scholarship: 0,
+        previousDue: 500,
+        paidCurrent: 0,
+        photo: '',
+        manualAbsentFine: 50,
+        manualCharges: [
+          { title: 'Model Test Booklet', amount: 150 }
+        ],
+        attendance: { '2026-11-19': 'A', '2026-11-21': 'P' }
+      },
+      {
+        id: 'AMC-GEC-26-003',
+        name: 'Mehedi Hasan',
+        classYear: 'HSC 1st Year',
+        branch: 'GEC',
+        slot: 'Slot A',
+        studentWa: '01611445566',
+        guardianWa: '01811445566',
+        email: 'mehedi.hsc@gmail.com',
+        joiningMonth: '2026-11',
+        monthlyFee: 1500,
+        scholarship: 300,
+        previousDue: 0,
+        paidCurrent: 0,
+        photo: '',
+        manualAbsentFine: 0,
+        manualCharges: [],
+        attendance: { '2026-11-21': 'A' }
+      },
+      {
+        id: 'AMC-HT-26-004',
+        name: 'Tasnim Tabassum',
+        classYear: 'HSC 2nd Year',
+        branch: 'Home Tuition',
+        slot: 'Tuition 1',
+        billingType: 'cycle_10',
+        studentWa: '01715556677',
+        guardianWa: '01815556677',
+        email: 'tasnim.ht@gmail.com',
+        joiningMonth: '2026-11',
+        monthlyFee: 6000,
+        scholarship: 0,
+        previousDue: 0,
+        paidCurrent: 0,
+        manualAbsentFine: 0,
+        manualCharges: [],
+        attendance: { '2026-11-15': 'P', '2026-11-17': 'P', '2026-11-19': 'A', '2026-11-21': 'P' }
+      }
+    ],
+    exams: [
+      {
+        id: 'EX-101',
+        title: 'Class Test 1: Matrices & Determinants',
+        classYear: 'HSC 1st Year',
+        type: 'Class Test (CQ & MCQ)',
+        mcqMax: 15,
+        dateTime: '2026-11-23T16:00',
+        branch: 'ALL',
+        slot: 'ALL',
+        cqMax: 30,
+        pracMax: 0,
+        syllabus: 'Higher Math 1st Paper Ch. 1A & 1B',
+        scores: {
+          'AMC-GEC-26-001': { cq: 27, mcq: 13, prac: 0 },
+          'AMC-CBZ-26-002': { cq: 24, mcq: 12, prac: 0 },
+          'AMC-GEC-26-003': { cq: 28, mcq: 14, prac: 0 }
+        }
+      }
+    ]
+  };
+
+  let state = loadState();
+  let activeTab = 'students';
+  let activeRole = 'teacher';
+  let pendingPhotoDataUrl = '';
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return JSON.parse(JSON.stringify(defaultState));
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }
+
+  async function pushToSheet(payload) {
+    const url = (state.config && state.config.scriptUrl) || '';
+    if (!url) return;
+    try {
+      await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(Object.assign({ mobile: '01616397272', password: 'abrar2026' }, payload))
+      });
+    } catch (e) {}
+  }
+
+  async function syncTeacherFromSheet() {
+    const url = (state.config && state.config.scriptUrl) || '';
+    if (!url) return;
+    try {
+      const res = await fetch(url + '?action=teacherSync&mobile=01616397272&password=abrar2026');
+      const data = await res.json();
+      if (data && data.ok && Array.isArray(data.students) && data.students.length) {
+        showToast('Synced ' + data.students.length + ' students from Google Sheet');
+      } else if (data && data.ok) {
+        showToast('Connected to Google Sheet');
+      }
+    } catch (e) {
+      showToast('Using offline data (Sheet sync unavailable here)');
+    }
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.remove('hidden');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.add('hidden'), 3200);
+  }
+
+  function waUrl(phone, text) {
+    let clean = String(phone || '').replace(/\D/g, '');
+    if (clean.startsWith('01')) clean = '88' + clean;
+    return 'https://wa.me/' + clean + '?text=' + encodeURIComponent(text);
+  }
+
+  function nextStudentId(branch, joiningMonth) {
+    const code = branch === 'Chawkbazar' ? 'CBZ' : (branch === 'Home Tuition' ? 'HT' : 'GEC');
+    const yr = (joiningMonth || '2026-11').slice(2, 4);
+    const seq = state.students.length + 1;
+    return 'AMC-' + code + '-' + yr + '-' + String(seq).padStart(3, '0');
+  }
+
+  function calcLedger(s) {
+    const presentCount = Object.values(s.attendance || {}).filter(v => v === 'P').length;
+    const absentCount = Object.values(s.attendance || {}).filter(v => v === 'A').length;
+    const cycleMap = { cycle_8: 8, cycle_10: 10, cycle_12: 12 };
+    const cycleTarget = cycleMap[s.billingType] || 0;
+    const isCycle = cycleTarget > 0;
+    const netFee = Math.max(0, (Number(s.monthlyFee) || 0) - (Number(s.scholarship) || 0));
+    const fine = s.branch === 'Home Tuition' ? 0 : (Number(s.manualAbsentFine) || 0);
+    const manualTotal = (s.manualCharges || []).reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
+    const prevDue = Number(s.previousDue) || 0;
+    const paid = Number(s.paidCurrent) || 0;
+    const totalBill = prevDue + netFee + fine + manualTotal;
+    const due = Math.max(0, totalBill - paid);
+    return { isCycle, cycleTarget, presentCount, netFee, absentCount, fine, manualTotal, prevDue, paid, totalBill, due };
+  }
+
+  function filteredStudents() {
+    const b = document.getElementById('filter-branch').value;
+    const c = document.getElementById('filter-class').value;
+    const sl = document.getElementById('filter-slot').value;
+    const q = (document.getElementById('search-student').value || '').trim().toLowerCase();
+    return state.students.filter(s => {
+      if (b !== 'ALL' && s.branch !== b) return false;
+      if (c !== 'ALL' && s.classYear !== c) return false;
+      if (sl !== 'ALL' && s.slot !== sl) return false;
+      if (q && !(s.id.toLowerCase().includes(q) || s.name.toLowerCase().includes(q) || s.guardianWa.includes(q))) return false;
+      return true;
+    });
+  }
+
+  function avatarHtml(s) {
+    if (s.photo) {
+      return '<img src="' + s.photo + '" alt="' + s.name + '" class="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0">';
+    }
+    const initials = s.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    return '<div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-700 font-bold text-sm flex items-center justify-center border border-blue-100 shrink-0">' + initials + '</div>';
+  }
+
+  function getHomeTuitions() {
+    return (state.config && state.config.homeTuitions) || [
+      { name: 'Tuition 1', days: 'Sun, Tue, Thu', time: '7:00 PM', location: 'Nasirabad' },
+      { name: 'Tuition 2', days: 'Sat, Mon, Wed', time: '8:15 PM', location: 'Khulshi' }
+    ];
+  }
+
+  function formatStudentSlot(s) {
+    if (s.branch === 'Home Tuition') {
+      const ht = getHomeTuitions().find(x => x.name === s.slot);
+      return ht ? `${ht.name} &bull; ${ht.time} &bull; ${ht.location}` : `Home Tuition &bull; ${s.slot}`;
+    }
+    return `${s.branch} &bull; ${s.slot}`;
+  }
+
+  function syncSlotDropdowns() {
+    const slots = (state.config && state.config.slots) || [];
+    const hts = getHomeTuitions();
+    const filterBranch = document.getElementById('filter-branch').value;
+    const filterSlotEl = document.getElementById('filter-slot');
+    const curFilterSlot = filterSlotEl.value;
+
+    if (filterBranch === 'Home Tuition') {
+      filterSlotEl.innerHTML = '<option value="ALL">All Home Tuitions</option>' +
+        hts.map(h => `<option value="${h.name}">${h.name} (${h.time} &bull; ${h.location})</option>`).join('');
+    } else {
+      filterSlotEl.innerHTML = '<option value="ALL">All Slots</option>' +
+        slots.map(sl => `<option value="${sl.name}">${sl.name} (${sl.days} &bull; ${sl.time})</option>`).join('') +
+        (filterBranch === 'ALL' ? hts.map(h => `<option value="${h.name}">${h.name} (${h.time} &bull; ${h.location})</option>`).join('') : '');
+    }
+    if (Array.from(filterSlotEl.options).some(o => o.value === curFilterSlot)) filterSlotEl.value = curFilterSlot;
+
+    const exSlotEl = document.getElementById('ex-slot');
+    const curEx = exSlotEl.value;
+    exSlotEl.innerHTML = '<option value="ALL">All Slots</option>' +
+      slots.map(sl => `<option value="${sl.name}">${sl.name} (${sl.days} &bull; ${sl.time})</option>`).join('') +
+      hts.map(h => `<option value="${h.name}">${h.name} (${h.time})</option>`).join('');
+    if (Array.from(exSlotEl.options).some(o => o.value === curEx)) exSlotEl.value = curEx;
+
+    const admBranch = document.getElementById('adm-branch').value;
+    const admSlot = document.getElementById('adm-slot');
+    const curAdm = admSlot.value;
+    if (admBranch === 'Home Tuition') {
+      admSlot.innerHTML = hts.map(h => `<option value="${h.name}">${h.name} (${h.days} &bull; ${h.time} &bull; ${h.location})</option>`).join('');
+    } else {
+      admSlot.innerHTML = slots.map(sl => `<option value="${sl.name}">${sl.name} (${sl.days} &bull; ${sl.time})</option>`).join('');
+    }
+    if (Array.from(admSlot.options).some(o => o.value === curAdm)) admSlot.value = curAdm;
+  }
+
+  function renderStudentCalendar(s) {
+    const now = new Date(2026, 10, 21); // Current month Nov 2026
+    const y = now.getFullYear(), m = now.getMonth();
+    const monthKey = y + '-' + String(m + 1).padStart(2, '0');
+    const monthName = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    document.getElementById('student-cal-title').textContent = 'Attendance Calendar — ' + monthName;
+
+    const firstDay = new Date(y, m, 1).getDay();
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const headers = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+      .map(d => `<div class="text-[11px] font-semibold text-slate-400 py-1">${d}</div>`).join('');
+
+    let cells = headers;
+    for (let i = 0; i < firstDay; i++) cells += '<div></div>';
+    for (let d = 1; d <= daysInMonth; d++) {
+      const iso = monthKey + '-' + String(d).padStart(2, '0');
+      const st = (s.attendance || {})[iso] || '';
+      let cls = 'bg-slate-50 text-slate-600 border border-slate-100';
+      if (st === 'A') cls = 'bg-rose-600 text-white font-bold';
+      else if (st === 'P') cls = 'bg-emerald-100 text-emerald-800 font-bold';
+      else if (st === 'L') cls = 'bg-amber-100 text-amber-800 font-bold';
+      cells += `<div class="py-1.5 rounded-lg ${cls}" title="${iso}${st ? ': ' + st : ''}">${d}${st ? '<span class="block text-[9px] leading-none">' + st + '</span>' : ''}</div>`;
+    }
+    document.getElementById('student-cal-grid').innerHTML = cells;
+  }
+
+  function showTeacherCalendarModal(id) {
+    const s = state.students.find(x => x.id === id);
+    if (!s) return;
+    const l = calcLedger(s);
+    const now = new Date(2026, 10, 21);
+    const y = now.getFullYear(), m = now.getMonth();
+    const monthKey = y + '-' + String(m + 1).padStart(2, '0');
+    const firstDay = new Date(y, m, 1).getDay();
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    let cells = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => `<div class="text-[11px] font-semibold text-slate-400 py-1">${d}</div>`).join('');
+    for (let i = 0; i < firstDay; i++) cells += '<div></div>';
+    for (let d = 1; d <= daysInMonth; d++) {
+      const iso = monthKey + '-' + String(d).padStart(2, '0');
+      const st = (s.attendance || {})[iso] || '';
+      let cls = 'bg-slate-50 text-slate-600 border border-slate-100';
+      if (st === 'A') cls = 'bg-rose-600 text-white font-bold';
+      else if (st === 'P') cls = 'bg-emerald-100 text-emerald-800 font-bold';
+      else if (st === 'L') cls = 'bg-amber-100 text-amber-800 font-bold';
+      cells += `<div class="py-1.5 rounded-lg ${cls}">${d}${st ? '<span class="block text-[9px] leading-none">' + st + '</span>' : ''}</div>`;
+    }
+    const html = `
+      <div class="space-y-3 text-xs">
+        ${pdfHeaderHtml('Current Month Attendance Calendar', '', s.branch === 'Home Tuition')}
+        <p><strong>${s.name}</strong> (<span class="mono">${s.id}</span>) &bull; ${formatStudentSlot(s)} &bull; <strong>${l.isCycle ? 'By Day (' + l.presentCount + '/' + l.cycleTarget + ' Classes • ' + l.netFee + ' BDT)' : 'Monthly (' + l.netFee + ' BDT)'}</strong></p>
+        <div class="grid grid-cols-7 gap-1.5 text-center">${cells}</div>
+      </div>
+    `;
+    openPrintModal('Attendance Calendar — ' + s.name, html, waUrl(s.guardianWa, `Abrar Math Coaching Attendance (${s.name}): ${l.presentCount} Present, ${l.absentCount} Absent.`));
+  }
+
+  function renderSettingsModal() {
+    document.getElementById('cfg-absent-fine').value = state.config.defaultAbsentFine ?? 50;
+    const slots = state.config.slots || [];
+    document.getElementById('custom-slots-list').innerHTML = slots.map((sl, idx) => `
+      <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-1.5">
+        <div class="flex items-center justify-between">
+          <strong class="text-slate-900">${sl.name}</strong>
+          <div class="flex items-center gap-2">
+            <button data-save-slot="${idx}" class="text-blue-700 font-semibold hover:underline">Save</button>
+            ${idx >= 2 ? `<button data-del-slot="${idx}" class="text-rose-600 font-semibold hover:underline">Remove</button>` : '<span class="text-slate-400">Default</span>'}
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-1.5">
+          <input id="edit-slot-days-${idx}" type="text" value="${sl.days}" class="border border-slate-200 rounded px-2 py-1 bg-white text-xs" placeholder="Days">
+          <input id="edit-slot-time-${idx}" type="text" value="${sl.time}" class="border border-slate-200 rounded px-2 py-1 bg-white text-xs" placeholder="Time">
+        </div>
+      </div>
+    `).join('');
+    const hts = getHomeTuitions();
+    document.getElementById('home-tuitions-list').innerHTML = hts.map((ht, idx) => `
+      <div class="bg-blue-50/50 border border-blue-200 rounded-lg p-2.5 space-y-1.5">
+        <div class="flex items-center justify-between">
+          <input id="edit-ht-name-${idx}" type="text" value="${ht.name}" class="font-bold text-slate-900 bg-white border border-slate-200 rounded px-2 py-0.5 text-xs w-32">
+          <div class="flex items-center gap-2">
+            <button data-save-ht="${idx}" class="text-blue-700 font-semibold hover:underline">Save</button>
+            <button data-del-ht="${idx}" class="text-rose-600 font-semibold hover:underline">Remove</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-1.5">
+          <input id="edit-ht-days-${idx}" type="text" value="${ht.days}" class="border border-slate-200 rounded px-2 py-1 bg-white text-xs" placeholder="Days">
+          <input id="edit-ht-time-${idx}" type="text" value="${ht.time}" class="border border-slate-200 rounded px-2 py-1 bg-white text-xs" placeholder="Time">
+          <input id="edit-ht-loc-${idx}" type="text" value="${ht.location}" class="border border-slate-200 rounded px-2 py-1 bg-white text-xs" placeholder="Location">
+        </div>
+        <p class="text-[11px] text-slate-600">Students: ${state.students.filter(st => st.branch === 'Home Tuition' && st.slot === ht.name).map(st => st.name).join(', ') || 'None assigned yet'}</p>
+      </div>
+    `).join('');
+  }
+
+  function renderAll() {
+    syncSlotDropdowns();
+    document.getElementById('pending-count').textContent = state.pendingAdmissions.length;
+    const list = filteredStudents();
+    const today = document.getElementById('att-date').value;
+
+    // KPIs
+    document.getElementById('kpi-students').textContent = list.length;
+    let absToday = 0, totalDue = 0, totalPaid = 0;
+    list.forEach(s => {
+      if ((s.attendance || {})[today] === 'A') absToday++;
+      const l = calcLedger(s);
+      totalDue += l.due;
+      totalPaid += l.paid;
+    });
+    document.getElementById('kpi-absent').textContent = absToday;
+    document.getElementById('kpi-dues').textContent = totalDue.toLocaleString();
+    document.getElementById('kpi-collected').textContent = totalPaid.toLocaleString();
+
+    renderStudentsTab(list);
+    renderAttendanceTab(list, today);
+    renderFeesTab(list);
+    renderExamsTab(list);
+    renderStudentView();
+  }
+
+  function renderStudentsTab(list) {
+    const container = document.getElementById('students-list');
+    if (!list.length) {
+      container.innerHTML = '<div class="md:col-span-2 bg-white border border-slate-200 rounded-2xl p-6 text-center text-sm text-slate-500">No students match the selected filters.</div>';
+      return;
+    }
+    container.innerHTML = list.map(s => {
+      const l = calcLedger(s);
+      return `
+        <div class="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-center gap-3">
+              ${avatarHtml(s)}
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="mono text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">${s.id}</span>
+                  <span class="text-xs text-slate-500">${formatStudentSlot(s)}</span>
+                </div>
+                <h3 class="text-sm font-bold text-slate-900 mt-1">${s.name}</h3>
+                <p class="text-xs text-slate-500">${s.classYear} &bull; Joined ${s.joiningMonth}</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="text-xs font-semibold ${l.due === 0 ? 'text-emerald-700 bg-emerald-50' : 'text-amber-700 bg-amber-50'} px-2 py-1 rounded-lg">
+                ${l.due === 0 ? 'Cleared' : 'Due ' + l.due + ' BDT'}
+              </span>
+            </div>
+          </div>
+          <div class="text-xs text-slate-600 flex flex-wrap gap-x-4 gap-y-1 border-t border-slate-100 pt-2">
+            <span>${l.isCycle ? `By Day (${l.presentCount}/${l.cycleTarget} Classes): <strong>${l.netFee} BDT</strong>` : `Monthly Fee: <strong>${l.netFee} BDT</strong>${s.scholarship > 0 ? ' (Schol: -' + s.scholarship + ')' : ''}`}</span>
+            <span>Guardian WA: <strong>${s.guardianWa}</strong></span>
+          </div>
+          <div class="flex flex-wrap gap-2 pt-1">
+            <button data-action="admission-pdf" data-id="${s.id}" class="text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-1.5 rounded-lg">Admission PDF</button>
+            <button data-action="marksheet-pdf" data-id="${s.id}" class="text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg">Result Marksheet</button>
+            <button data-action="monthly-report" data-id="${s.id}" class="text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg">Monthly Performance PDF</button>
+            <button data-action="cal-modal" data-id="${s.id}" class="text-xs font-semibold bg-purple-50 hover:bg-purple-100 text-purple-700 px-3 py-1.5 rounded-lg">Calendar (${l.presentCount}P/${l.absentCount}A)</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderAttendanceTab(list, today) {
+    const container = document.getElementById('attendance-list');
+    container.innerHTML = list.map(s => {
+      const status = (s.attendance || {})[today] || '';
+      const btnCls = (target, activeColor) =>
+        'px-3 py-1.5 rounded-lg text-xs font-semibold border ' +
+        (status === target ? activeColor + ' text-white border-transparent' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50');
+      const waLink = status === 'A' ? waUrl(s.guardianWa,
+        `Abrar Math Coaching (${s.branch}): ${s.name} (${s.id}) was ABSENT on ${today}.`
+      ) : '';
+      return `
+        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            ${avatarHtml(s)}
+            <div>
+              <p class="text-sm font-bold text-slate-900">${s.name} <span class="mono text-xs text-slate-500 font-normal">${s.id}</span></p>
+              <p class="text-xs text-slate-500">${formatStudentSlot(s)} &bull; ${s.classYear}</p>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button data-att="P" data-id="${s.id}" class="${btnCls('P', 'bg-emerald-600')}">P</button>
+            <button data-att="A" data-id="${s.id}" class="${btnCls('A', 'bg-rose-600')}">A</button>
+            ${s.branch !== 'Home Tuition' ? `<input data-fine-id="${s.id}" type="number" min="0" value="${s.manualAbsentFine || 0}" title="Manual Absent Fine (BDT)" class="w-16 border border-slate-200 rounded-lg px-2 py-1 text-xs text-center" placeholder="Fine">` : ''}
+            <button data-att="L" data-id="${s.id}" class="${btnCls('L', 'bg-amber-500')}">L</button>
+            ${status === 'A' ? `<a href="${waLink}" target="_blank" rel="noopener noreferrer" class="ml-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">WA Alert</a>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderFeesTab(list) {
+    const filter = document.getElementById('fee-filter-status').value;
+    const container = document.getElementById('fees-list');
+    const rows = list.filter(s => {
+      const l = calcLedger(s);
+      if (filter === 'DUE') return l.due > 0;
+      if (filter === 'PAID') return l.due === 0;
+      return true;
+    });
+    container.innerHTML = rows.map(s => {
+      const l = calcLedger(s);
+      return `
+        <div class="bg-white border border-slate-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="mono text-xs font-semibold text-blue-700">${s.id}</span>
+              <span class="text-sm font-bold text-slate-900">${s.name}</span>
+            </div>
+            <p class="text-xs text-slate-600">
+              Prev Due: <strong>${l.prevDue}</strong> + ${l.isCycle ? `By Day (${l.presentCount}/${l.cycleTarget} Classes)` : 'Monthly Fee'}: <strong>${l.netFee}</strong> + Fines: <strong>${l.fine}</strong> + Manual: <strong>${l.manualTotal}</strong> &minus; Paid: <strong>${l.paid}</strong>
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="mono text-sm font-bold ${l.due > 0 ? 'text-rose-600' : 'text-emerald-700'}">Due: ${l.due} BDT</span>
+            <button data-action="add-charge" data-id="${s.id}" class="text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-1.5 rounded-lg">+ Manual Charge</button>
+            <button data-action="collect-pay" data-id="${s.id}" class="text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg">Collect &amp; WA Receipt</button>
+            <button data-action="fee-receipt-pdf" data-id="${s.id}" class="text-xs font-semibold bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg">Receipt PDF</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderExamsTab(list) {
+    const sel = document.getElementById('select-exam-marks');
+    const prevVal = sel.value;
+    sel.innerHTML = state.exams.map(e => `<option value="${e.id}">${e.title}</option>`).join('');
+    if (prevVal && state.exams.some(e => e.id === prevVal)) sel.value = prevVal;
+
+    const exam = state.exams.find(e => e.id === sel.value) || state.exams[0];
+    const container = document.getElementById('marks-entry-list');
+    if (!exam) {
+      container.innerHTML = '<p class="text-xs text-slate-500">No exams created yet.</p>';
+      return;
+    }
+    const showCq = (exam.type || '').includes('CQ') || exam.type === 'Final Test';
+    const showMcq = (exam.type || '').includes('MCQ') || exam.type === 'Final Test';
+    const showPrac = exam.type === 'Final Test';
+    container.innerHTML = list.map(s => {
+      const sc = (exam.scores || {})[s.id] || { cq: '', mcq: '', prac: '' };
+      const total = (showCq ? (Number(sc.cq) || 0) : 0) + (showMcq ? (Number(sc.mcq) || 0) : 0) + (showPrac ? (Number(sc.prac) || 0) : 0);
+      const maxTotal = (showCq ? (Number(exam.cqMax) || 0) : 0) + (showMcq ? (Number(exam.mcqMax) || 0) : 0) + (showPrac ? (Number(exam.pracMax) || 0) : 0);
+      const waMsg = `Abrar Math Coaching Result (${exam.title}): ${s.name} (${s.id}) scored ${total}/${maxTotal}.`;
+      return `
+        <div class="border border-slate-200 rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div>
+            <p class="font-bold text-slate-900">${s.name}</p>
+            <p class="mono text-slate-500">${s.id}</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-1.5">
+            ${showCq ? `<label class="text-slate-500">CQ/${exam.cqMax || '-'}</label><input data-mark-id="${s.id}" data-exam-id="${exam.id}" data-part="cq" type="number" value="${sc.cq}" class="w-14 border border-slate-200 rounded-lg px-1.5 py-1 text-center font-semibold">` : ''}
+            ${showMcq ? `<label class="text-slate-500">MCQ/${exam.mcqMax || '-'}</label><input data-mark-id="${s.id}" data-exam-id="${exam.id}" data-part="mcq" type="number" value="${sc.mcq}" class="w-14 border border-slate-200 rounded-lg px-1.5 py-1 text-center font-semibold">` : ''}
+            ${showPrac ? `<label class="text-slate-500">Prac/${exam.pracMax || '-'}</label><input data-mark-id="${s.id}" data-exam-id="${exam.id}" data-part="prac" type="number" value="${sc.prac}" class="w-14 border border-slate-200 rounded-lg px-1.5 py-1 text-center font-semibold">` : ''}
+            <a href="${waUrl(s.guardianWa, waMsg)}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">WA Marks</a>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderStudentView() {
+    const sel = document.getElementById('student-portal-select');
+    const prev = sel.value;
+    sel.innerHTML = state.students.map(s => `<option value="${s.id}">${s.name} (${s.id})</option>`).join('');
+    if (prev && state.students.some(s => s.id === prev)) sel.value = prev;
+
+    const s = state.students.find(x => x.id === sel.value) || state.students[0];
+    if (!s) return;
+
+    const l = calcLedger(s);
+    const presentDays = Object.values(s.attendance || {}).filter(v => v === 'P').length;
+
+    // 12-Hour Exam Alarms
+    const alarmsBox = document.getElementById('student-alarms-list');
+    const relevantExams = state.exams.filter(e =>
+      (e.branch === 'ALL' || e.branch === s.branch) && (e.slot === 'ALL' || e.slot === s.slot)
+    );
+    alarmsBox.innerHTML = relevantExams.map(e => {
+      const dt = new Date(e.dateTime);
+      const alarmTime = new Date(dt.getTime() - 12 * 60 * 60 * 1000);
+      const alarmStr = isNaN(alarmTime) ? '12h before exam' : alarmTime.toLocaleString();
+      return `
+        <div class="bg-white border border-blue-200 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div>
+            <p class="font-bold text-slate-900">${e.title} <span class="font-normal text-slate-500">(${e.type})</span></p>
+            <p class="text-slate-600">Exam: ${e.dateTime.replace('T', ' ')} &bull; Syllabus: ${e.syllabus || 'TBA'}</p>
+          </div>
+          <div class="text-right">
+            <p class="mono font-semibold text-blue-700">Alarm: ${alarmStr}</p>
+            <p class="text-[11px] text-slate-500">Auto-set 12h before exam</p>
+          </div>
+        </div>
+      `;
+    }).join('') || '<p class="text-xs text-blue-800">No upcoming exam alerts right now.</p>';
+
+    renderStudentCalendar(s);
+    document.getElementById('student-summary-cards').innerHTML = `
+      <div class="bg-white border border-slate-200 rounded-2xl p-3.5">
+        <p class="text-xs text-slate-500">Student ID</p>
+        <p class="mono text-sm font-bold text-blue-700 mt-1">${s.id}</p>
+      </div>
+      <div class="bg-white border border-slate-200 rounded-2xl p-3.5">
+        <p class="text-xs text-slate-500">Attendance</p>
+        <p class="text-lg font-bold text-slate-900 mt-1">${presentDays}P / ${l.absentCount}A</p>
+      </div>
+      <div class="bg-white border border-slate-200 rounded-2xl p-3.5">
+        <p class="text-xs text-slate-500">Absence Fines</p>
+        <p class="text-lg font-bold text-rose-600 mt-1">${l.fine} BDT</p>
+      </div>
+      <div class="bg-white border border-slate-200 rounded-2xl p-3.5">
+        <p class="text-xs text-slate-500">Total Due</p>
+        <p class="text-lg font-bold ${l.due > 0 ? 'text-amber-700' : 'text-emerald-700'} mt-1">${l.due} BDT</p>
+      </div>
+    `;
+
+    document.getElementById('student-marks-list').innerHTML = state.exams.map(e => {
+      const sc = (e.scores || {})[s.id];
+      const total = sc ? (Number(sc.cq) || 0) + (Number(sc.mcq) || 0) + (Number(sc.prac) || 0) : '—';
+      const maxTotal = (Number(e.cqMax) || 0) + (Number(e.mcqMax) || 0) + (Number(e.pracMax) || 0);
+      return `
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2 text-xs">
+          <span class="font-semibold text-slate-800">${e.title}</span>
+          <span class="mono font-bold text-blue-700">${total} / ${maxTotal}</span>
+        </div>
+      `;
+    }).join('');
+
+    document.getElementById('student-fee-detail').innerHTML = `
+      <p>Previous Due: <strong>${l.prevDue} BDT</strong></p>
+      <p>${l.isCycle ? `Tuition Fee (${l.cycleTarget}-Day Cycle &bull; ${l.presentCount}/${l.cycleTarget} Classes Done)` : `Monthly Fee (${s.monthlyFee} &minus; ${s.scholarship} Scholarship)`}: <strong>${l.netFee} BDT</strong></p>
+      <p>Absence Fines (${l.absentCount} &times; 50 BDT): <strong>${l.fine} BDT</strong></p>
+      <p>Manual Charges: <strong>${l.manualTotal} BDT</strong> ${(s.manualCharges || []).map(c => '(' + c.title + ': ' + c.amount + ')').join(', ')}</p>
+      <p>Paid This Month: <strong class="text-emerald-700">${l.paid} BDT</strong></p>
+      <p class="pt-1 border-t border-slate-200 font-bold">Remaining Due: ${l.due} BDT</p>
+    `;
+  }
+
+  function renderQr(containerId, text, size) {
+    const el = document.getElementById(containerId);
+    el.innerHTML = '';
+    try {
+      if (typeof QRCode !== 'undefined') {
+        new QRCode(el, { text: text, width: size || 110, height: size || 110 });
+        return;
+      }
+    } catch (e) {}
+    el.innerHTML = '<div class="mono text-[11px] p-2 border border-slate-300 rounded">QR: ' + text + '</div>';
+  }
+
+  function openPrintModal(title, html, waLink) {
+    document.getElementById('print-modal-title').textContent = title;
+    document.getElementById('print-sheet').innerHTML = html;
+    const waBtn = document.getElementById('btn-print-wa');
+    if (waLink) {
+      waBtn.href = waLink;
+      waBtn.classList.remove('hidden');
+    } else {
+      waBtn.classList.add('hidden');
+    }
+    document.getElementById('modal-print').classList.remove('hidden');
+  }
+
+  function pdfHeaderHtml(docSubtitle, rightHtml, isHomeTuition) {
+    const locLine = isHomeTuition
+      ? 'Home Tuition Service &bull; Mobile: <a href="tel:01616397272" class="font-semibold text-blue-700">01616397272</a>'
+      : 'GEC (Jahanara Mansion) &bull; Chawkbazar (KB Plaza) &bull; Mobile: <a href="tel:01616397272" class="font-semibold text-blue-700">01616397272</a>';
+    return `
+      <div class="flex items-start justify-between border-b-2 border-slate-900 pb-3">
+        <div>
+          <h1 class="text-xl font-bold tracking-tight text-slate-900">ABRAR MATH COACHING</h1>
+          <p class="text-xs font-semibold text-slate-800">Md. Nurul Abrar</p>
+          <p class="text-xs text-slate-600">Lecturer (Mathematics), Ispahani Public School &amp; College, Chittagong</p>
+          <p class="text-xs text-slate-600">${locLine}</p>
+          <p class="text-xs font-bold text-slate-900 mt-1.5 uppercase">${docSubtitle}</p>
+        </div>
+        <div>${rightHtml || ''}</div>
+      </div>
+    `;
+  }
+
+  function showAdmissionPdf(id) {
+    const s = state.students.find(x => x.id === id);
+    if (!s) return;
+    const l = calcLedger(s);
+    const qrPayload = JSON.stringify({ id: s.id, branch: s.branch, slot: s.slot });
+    const html = `
+      <div class="space-y-4 text-sm">
+${pdfHeaderHtml("Student Admission Form", '<div id="pdf-qr-target"></div>')}
+        <div class="flex items-start justify-between gap-4">
+          <div class="space-y-1.5 text-xs">
+            <p><strong>Student ID:</strong> <span class="mono font-bold">${s.id}</span></p>
+            <p><strong>Full Name:</strong> ${s.name}</p>
+            <p><strong>Class &amp; Slot:</strong> ${s.classYear} &bull; ${s.branch} (${s.slot})</p>
+            <p><strong>Joining Month:</strong> ${s.joiningMonth}</p>
+            <p><strong>Student WhatsApp:</strong> ${s.studentWa}</p>
+            <p><strong>Guardian WhatsApp:</strong> ${s.guardianWa}</p>
+            <p><strong>Email:</strong> ${s.email || '—'}</p>
+          </div>
+          <div class="shrink-0">${avatarHtml(s)}</div>
+        </div>
+        <table class="w-full text-xs border border-slate-300">
+          <tr class="bg-slate-100"><th class="p-2 text-left border-b">Monthly Base Fee</th><th class="p-2 text-left border-b">Scholarship</th><th class="p-2 text-left border-b">Net Monthly Fee</th><th class="p-2 text-left border-b">Absence Fine Policy</th></tr>
+          <tr><td class="p-2">${s.monthlyFee} BDT</td><td class="p-2">${s.scholarship} BDT</td><td class="p-2 font-bold">${l.netFee} BDT</td><td class="p-2">50 BDT / unexcused absence</td></tr>
+        </table>
+        <div class="grid grid-cols-3 gap-6 pt-10 text-xs text-center">
+          <div class="border-t border-slate-400 pt-1">Student Signature</div>
+          <div class="border-t border-slate-400 pt-1">Guardian Signature</div>
+          <div class="border-t border-slate-400 pt-1">Md. Nurul Abrar</div>
+        </div>
+      </div>
+    `;
+    openPrintModal('Admission Form — ' + s.id, html, waUrl(s.guardianWa, `Abrar Math Coaching Admission Confirmed! Student: ${s.name}, ID: ${s.id}, Branch: ${s.branch} (${s.slot}), Net Monthly Fee: ${l.netFee} BDT.`));
+    setTimeout(() => renderQr('pdf-qr-target', qrPayload, 76), 50);
+  }
+
+  function showResultMarksheetPdf(id) {
+    const s = state.students.find(x => x.id === id);
+    if (!s) return;
+    const l = calcLedger(s);
+    const rows = state.exams.map(e => {
+      const sc = (e.scores || {})[s.id] || { cq: 0, mcq: 0, prac: 0 };
+      const tot = (Number(sc.cq) || 0) + (Number(sc.mcq) || 0) + (Number(sc.prac) || 0);
+      const max = (Number(e.cqMax) || 0) + (Number(e.mcqMax) || 0) + (Number(e.pracMax) || 0);
+      return `<tr><td class="p-2 border-b">${e.title}</td><td class="p-2 border-b">${e.type}</td><td class="p-2 border-b mono">${tot} / ${max}</td></tr>`;
+    }).join('');
+    const html = `
+      <div class="space-y-4 text-sm">
+${pdfHeaderHtml("Result Marksheet", '<div id="pdf-qr-target"></div>')}
+        <p class="text-xs text-slate-700"><strong>Student:</strong> ${s.name} (<span class="mono">${s.id}</span>) &bull; ${s.classYear} &bull; ${s.branch} (${s.slot})</p>
+        <table class="w-full text-xs border border-slate-300">
+          <thead><tr class="bg-slate-100"><th class="p-2 text-left border-b">Exam</th><th class="p-2 text-left border-b">Type</th><th class="p-2 text-left border-b">Score</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <p class="text-xs text-slate-600">Attendance Summary: ${Object.values(s.attendance || {}).filter(v => v === 'P').length} Present, ${l.absentCount} Absent (${l.fine} BDT Fine).</p>
+      </div>
+    `;
+    openPrintModal('Result Marksheet — ' + s.id, html, waUrl(s.guardianWa, `Abrar Math Coaching Result Marksheet for ${s.name} (${s.id}) is ready.`));
+    setTimeout(() => renderQr('pdf-qr-target', JSON.stringify({ id: s.id, doc: 'marksheet' }), 72), 50);
+  }
+
+  function showMonthlyPerformancePdf(id) {
+    const s = state.students.find(x => x.id === id);
+    if (!s) return;
+    const l = calcLedger(s);
+    const present = Object.values(s.attendance || {}).filter(v => v === 'P').length;
+    const examRows = state.exams.map(e => {
+      const sc = (e.scores || {})[s.id] || { cq: 0, mcq: 0, prac: 0 };
+      const tot = (Number(sc.cq) || 0) + (Number(sc.mcq) || 0) + (Number(sc.prac) || 0);
+      const max = (Number(e.cqMax) || 0) + (Number(e.mcqMax) || 0) + (Number(e.pracMax) || 0);
+      return `<li>${e.title}: <strong>${tot} / ${max}</strong></li>`;
+    }).join('');
+    const html = `
+      <div class="space-y-4 text-sm">
+${pdfHeaderHtml("Monthly Total Performance &amp; Fee Report", avatarHtml(s))}
+        <p class="text-xs text-slate-700"><strong>Student:</strong> ${s.name} (<span class="mono">${s.id}</span>) &bull; ${s.branch} &bull; ${s.classYear} (${s.slot})</p>
+        <div class="grid grid-cols-2 gap-4 text-xs">
+          <div class="border border-slate-200 p-3 rounded-lg space-y-1">
+            <h3 class="font-bold text-slate-900">1. Attendance &amp; Exams</h3>
+            <p>Present: <strong>${present}</strong> &bull; Absent: <strong>${l.absentCount}</strong></p>
+            <ul class="list-disc pl-4 space-y-0.5">${examRows}</ul>
+          </div>
+          <div class="border border-slate-200 p-3 rounded-lg space-y-1">
+            <h3 class="font-bold text-slate-900">2. Payment &amp; Dues Summary</h3>
+            <p>Previous Due: <strong>${l.prevDue} BDT</strong></p>
+            <p>Current Month Net Fee: <strong>${l.netFee} BDT</strong></p>
+            <p>Absence Fines: <strong>${l.fine} BDT</strong></p>
+            <p>Manual Charges: <strong>${l.manualTotal} BDT</strong></p>
+            <p>Paid: <strong class="text-emerald-700">${l.paid} BDT</strong></p>
+            <p class="border-t pt-1 font-bold">Total Remaining Due: ${l.due} BDT</p>
+          </div>
+        </div>
+      </div>
+    `;
+    const waText = `Abrar Math Coaching Monthly Report (${s.name} - ${s.id}): Attendance ${present}P/${l.absentCount}A, Previous Due ${l.prevDue} BDT, Current Fee+Fines+Charges ${l.netFee + l.fine + l.manualTotal} BDT, Paid ${l.paid} BDT, Remaining Due ${l.due} BDT.`;
+    openPrintModal('Monthly Performance — ' + s.id, html, waUrl(s.guardianWa, waText));
+  }
+
+  function showFeeReceiptPdf(id) {
+    const s = state.students.find(x => x.id === id);
+    if (!s) return;
+    const l = calcLedger(s);
+    const html = `
+      <div class="space-y-3 text-xs">
+${pdfHeaderHtml("Official Fee Receipt", "")}
+        <p><strong>Student:</strong> ${s.name} (<span class="mono">${s.id}</span>) &bull; ${s.branch} (${s.slot})</p>
+        <p>Previous Due: <strong>${l.prevDue} BDT</strong></p>
+        <p>Net Monthly Fee (${s.monthlyFee} - ${s.scholarship} Scholarship): <strong>${l.netFee} BDT</strong></p>
+        <p>Absence Fines (${l.absentCount} &times; 50 BDT): <strong>${l.fine} BDT</strong></p>
+        <p>Manual Charges: <strong>${l.manualTotal} BDT</strong></p>
+        <p class="text-sm font-bold text-emerald-700 border-t pt-2">Total Paid: ${l.paid} BDT &bull; Remaining Due: ${l.due} BDT</p>
+      </div>
+    `;
+    openPrintModal('Fee Receipt — ' + s.id, html, waUrl(s.guardianWa, `Abrar Math Coaching Receipt: Paid ${l.paid} BDT for ${s.name} (${s.id}). Remaining Due: ${l.due} BDT.`));
+  }
+
+  function renderPendingModal() {
+    const box = document.getElementById('pending-list');
+    if (!state.pendingAdmissions.length) {
+      box.innerHTML = '<p class="text-xs text-slate-500">All Google Form submissions have been approved.</p>';
+      return;
+    }
+    box.innerHTML = state.pendingAdmissions.map(p => `
+      <div class="border border-slate-200 rounded-xl p-3 space-y-2 text-xs">
+        <div class="flex justify-between">
+          <strong>${p.name} (${p.classYear})</strong>
+          <span class="text-slate-500">${p.branch} &bull; ${p.slot} &bull; Join: ${p.joiningMonth}</span>
+        </div>
+        <p class="text-slate-600">Guardian WA: ${p.guardianWa} &bull; Email: ${p.email}</p>
+        <div class="flex flex-wrap items-center gap-2">
+          <label>Fee (BDT)</label>
+          <input id="p-fee-${p.tempId}" type="number" value="1500" class="w-20 border border-slate-200 rounded px-2 py-1">
+          <label>Scholarship</label>
+          <input id="p-sch-${p.tempId}" type="number" value="0" class="w-20 border border-slate-200 rounded px-2 py-1">
+          <button data-approve-pending="${p.tempId}" class="ml-auto px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-semibold">Approve &amp; Generate ID</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Event Wiring
+  document.getElementById('att-date').value = '2026-11-21';
+  document.getElementById('ex-datetime').value = '2026-11-24T16:00';
+
+  function normPhone(p) {
+    let d = String(p || '').replace(/\D/g, '');
+    if (d.startsWith('880')) d = '0' + d.slice(3);
+    return d;
+  }
+
+  document.getElementById('login-tab-student').addEventListener('click', () => {
+    document.getElementById('form-student-login').classList.remove('hidden');
+    document.getElementById('form-teacher-login').classList.add('hidden');
+    document.getElementById('login-tab-student').className = 'py-2 rounded-lg text-xs font-semibold bg-white text-blue-700 shadow-sm';
+    document.getElementById('login-tab-teacher').className = 'py-2 rounded-lg text-xs font-semibold text-slate-600';
+  });
+
+  document.getElementById('login-tab-teacher').addEventListener('click', () => {
+    document.getElementById('form-teacher-login').classList.remove('hidden');
+    document.getElementById('form-student-login').classList.add('hidden');
+    document.getElementById('login-tab-teacher').className = 'py-2 rounded-lg text-xs font-semibold bg-white text-blue-700 shadow-sm';
+    document.getElementById('login-tab-student').className = 'py-2 rounded-lg text-xs font-semibold text-slate-600';
+  });
+
+  document.getElementById('form-student-login').addEventListener('submit', e => {
+    e.preventDefault();
+    const gPhone = normPhone(document.getElementById('login-guardian-wa').value);
+    const match = state.students.find(s => normPhone(s.guardianWa) === gPhone);
+    if (!match) {
+      showToast('Guardian WhatsApp number not found');
+      return;
+    }
+    activeRole = 'student';
+    document.getElementById('login-view').classList.add('hidden');
+    document.getElementById('teacher-view').classList.add('hidden');
+    document.getElementById('student-view').classList.remove('hidden');
+    document.getElementById('btn-logout').classList.remove('hidden');
+    document.getElementById('active-user-badge').textContent = match.name + ' (' + match.id + ')';
+    document.getElementById('active-user-badge').classList.remove('hidden');
+    renderStudentView();
+    document.getElementById('student-portal-select').value = match.id;
+    renderStudentView();
+    // Schedule 12h alarms via Android WebView bridge if present
+    if (typeof CoachingBridge !== 'undefined') {
+      state.exams.forEach(ex => {
+        try { CoachingBridge.scheduleExamAlarm12h(ex.id, ex.title, ex.dateTime); } catch (_) {}
+      });
+    }
+  });
+
+  document.getElementById('form-teacher-login').addEventListener('submit', e => {
+    e.preventDefault();
+    const mob = normPhone(document.getElementById('login-teacher-mobile').value);
+    const pass = document.getElementById('login-teacher-pass').value;
+    if (mob !== '01616397272' || pass !== 'abrar2026') {
+      showToast('Invalid teacher mobile or password');
+      return;
+    }
+    activeRole = 'teacher';
+    document.getElementById('login-view').classList.add('hidden');
+    document.getElementById('student-view').classList.add('hidden');
+    document.getElementById('teacher-view').classList.remove('hidden');
+    document.getElementById('btn-logout').classList.remove('hidden');
+    document.getElementById('active-user-badge').textContent = 'Teacher Admin';
+    document.getElementById('active-user-badge').classList.remove('hidden');
+    renderAll();
+  });
+
+  document.getElementById('btn-logout').addEventListener('click', () => {
+    document.getElementById('teacher-view').classList.add('hidden');
+    document.getElementById('student-view').classList.add('hidden');
+    document.getElementById('login-view').classList.remove('hidden');
+    document.getElementById('btn-logout').classList.add('hidden');
+    document.getElementById('active-user-badge').classList.add('hidden');
+  });
+
+  document.querySelectorAll('.t-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeTab = btn.dataset.tab;
+      document.querySelectorAll('.t-tab').forEach(b => {
+        b.className = b.dataset.tab === activeTab
+          ? 't-tab px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-white whitespace-nowrap'
+          : 't-tab px-4 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 whitespace-nowrap';
+      });
+      document.querySelectorAll('.t-panel').forEach(p => p.classList.add('hidden'));
+      document.getElementById('tab-' + activeTab).classList.remove('hidden');
+    });
+  });
+
+  document.getElementById('att-search').addEventListener('input', e => {
+    document.getElementById('search-student').value = e.target.value;
+    renderAll();
+  });
+  document.getElementById('search-student').addEventListener('input', e => {
+    document.getElementById('att-search').value = e.target.value;
+  });
+
+  ['filter-branch', 'filter-class', 'filter-slot', 'search-student', 'att-date', 'fee-filter-status', 'select-exam-marks'].forEach(id => {
+    document.getElementById(id).addEventListener('input', renderAll);
+    document.getElementById(id).addEventListener('change', renderAll);
+  });
+
+  document.getElementById('student-portal-select').addEventListener('change', renderStudentView);
+
+  document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => document.getElementById(btn.dataset.close).classList.add('hidden'));
+  });
+
+  document.getElementById('btn-open-add-student').addEventListener('click', () => {
+    pendingPhotoDataUrl = '';
+    document.getElementById('modal-admission').classList.remove('hidden');
+  });
+
+  document.getElementById('adm-photo').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      pendingPhotoDataUrl = ev.target.result;
+      document.getElementById('adm-photo-preview').src = pendingPhotoDataUrl;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('form-admission').addEventListener('submit', e => {
+    e.preventDefault();
+    const branch = document.getElementById('adm-branch').value;
+    const joining = document.getElementById('adm-joining').value;
+    const newId = nextStudentId(branch, joining);
+    state.students.unshift({
+      id: newId,
+      name: document.getElementById('adm-name').value.trim(),
+      classYear: document.getElementById('adm-class').value,
+      branch: branch,
+      slot: document.getElementById('adm-slot').value,
+      studentWa: document.getElementById('adm-stu-wa').value.trim(),
+      guardianWa: document.getElementById('adm-gua-wa').value.trim(),
+      email: document.getElementById('adm-email').value.trim(),
+      joiningMonth: joining,
+      billingType: document.getElementById('adm-billing').value,
+      monthlyFee: Number(document.getElementById('adm-fee').value) || 0,
+      scholarship: Number(document.getElementById('adm-scholarship').value) || 0,
+      previousDue: 0,
+      paidCurrent: 0,
+      manualAbsentFine: 0,
+      photo: pendingPhotoDataUrl,
+      manualCharges: [],
+      attendance: {}
+    });
+    saveState();
+    pushToSheet({ action: 'addStudent', student: state.students[0] });
+    document.getElementById('modal-admission').classList.add('hidden');
+    e.target.reset();
+    renderAll();
+    showToast('Enrolled with Student ID ' + newId);
+    showAdmissionPdf(newId);
+  });
+
+  document.getElementById('btn-sync-sheet').addEventListener('click', syncTeacherFromSheet);
+
+  document.getElementById('btn-open-pending').addEventListener('click', () => {
+    renderPendingModal();
+    document.getElementById('modal-pending').classList.remove('hidden');
+  });
+
+  document.getElementById('pending-list').addEventListener('click', e => {
+    const tid = e.target.dataset.approvePending;
+    if (!tid) return;
+    const idx = state.pendingAdmissions.findIndex(p => p.tempId === tid);
+    if (idx === -1) return;
+    const p = state.pendingAdmissions[idx];
+    const fee = Number(document.getElementById('p-fee-' + tid).value) || 1500;
+    const sch = Number(document.getElementById('p-sch-' + tid).value) || 0;
+    const newId = nextStudentId(p.branch, p.joiningMonth);
+    state.students.unshift({
+      id: newId,
+      name: p.name,
+      classYear: p.classYear,
+      branch: p.branch,
+      slot: p.slot,
+      studentWa: p.studentWa,
+      guardianWa: p.guardianWa,
+      email: p.email,
+      joiningMonth: p.joiningMonth,
+      monthlyFee: fee,
+      scholarship: sch,
+      previousDue: 0,
+      paidCurrent: 0,
+      manualAbsentFine: 0,
+      photo: p.photo || '',
+      manualCharges: [],
+      attendance: {}
+    });
+    state.pendingAdmissions.splice(idx, 1);
+    saveState();
+    renderPendingModal();
+    renderAll();
+    showToast('Approved ' + p.name + ' as ' + newId);
+  });
+
+  document.getElementById('btn-open-form-qr').addEventListener('click', () => {
+    document.getElementById('cfg-form-url').value = state.config.formUrl;
+    document.getElementById('cfg-script-url').value = state.config.scriptUrl || '';
+    document.getElementById('modal-qr').classList.remove('hidden');
+    setTimeout(() => renderQr('form-qr-box', state.config.formUrl, 160), 50);
+  });
+
+  document.getElementById('btn-save-cfg').addEventListener('click', () => {
+    state.config.formUrl = document.getElementById('cfg-form-url').value.trim();
+    state.config.scriptUrl = document.getElementById('cfg-script-url').value.trim();
+    saveState();
+    renderQr('form-qr-box', state.config.formUrl, 160);
+    showToast('Saved QR & Apps Script configuration');
+  });
+
+  document.getElementById('students-list').addEventListener('click', e => {
+    const act = e.target.dataset.action;
+    const id = e.target.dataset.id;
+    if (!act || !id) return;
+    if (act === 'admission-pdf') showAdmissionPdf(id);
+    if (act === 'marksheet-pdf') showResultMarksheetPdf(id);
+    if (act === 'monthly-report') showMonthlyPerformancePdf(id);
+    if (act === 'cal-modal') showTeacherCalendarModal(id);
+  });
+
+  document.getElementById('attendance-list').addEventListener('input', e => {
+    const fid = e.target.dataset.fineId;
+    if (!fid) return;
+    const s = state.students.find(x => x.id === fid);
+    if (!s) return;
+    s.manualAbsentFine = Number(e.target.value) || 0;
+    saveState();
+    renderFeesTab(filteredStudents());
+    renderStudentView();
+  });
+
+  document.getElementById('attendance-list').addEventListener('click', e => {
+    const att = e.target.dataset.att;
+    const id = e.target.dataset.id;
+    if (!att || !id) return;
+    const s = state.students.find(x => x.id === id);
+    if (!s) return;
+    const d = document.getElementById('att-date').value;
+    s.attendance = s.attendance || {};
+    const prevAtt = s.attendance[d];
+    s.attendance[d] = att;
+    const defFine = s.branch === 'Home Tuition' ? 0 : Number(state.config.defaultAbsentFine ?? 50);
+    if (att === 'A' && prevAtt !== 'A' && defFine > 0) {
+      s.manualAbsentFine = (Number(s.manualAbsentFine) || 0) + defFine;
+    }
+    saveState();
+    pushToSheet({ action: 'markAttendance', date: d, studentId: id, status: att });
+    renderAll();
+    if (att === 'A') showToast(s.branch === 'Home Tuition' ? s.name + ' marked Absent' : s.name + ' marked Absent (+' + defFine + ' BDT default fine, editable)');
+  });
+
+  document.getElementById('fees-list').addEventListener('click', e => {
+    const act = e.target.dataset.action;
+    const id = e.target.dataset.id;
+    if (!act || !id) return;
+    const s = state.students.find(x => x.id === id);
+    if (!s) return;
+
+    if (act === 'add-charge') {
+      document.getElementById('chg-stu-id').value = id;
+      document.getElementById('chg-stu-label').textContent = s.name + ' (' + s.id + ')';
+      document.getElementById('modal-charge').classList.remove('hidden');
+    } else if (act === 'collect-pay') {
+      const l = calcLedger(s);
+      document.getElementById('pay-stu-id').value = id;
+      document.getElementById('pay-stu-label').textContent = s.name + ' (' + s.id + ')';
+      document.getElementById('pay-breakdown').innerHTML = `
+        <p>Prev Due: <strong>${l.prevDue} BDT</strong> &bull; Net Fee: <strong>${l.netFee} BDT</strong></p>
+        <p>Fines: <strong>${l.fine} BDT</strong> &bull; Manual Charges: <strong>${l.manualTotal} BDT</strong></p>
+        <p>Remaining Due: <strong class="text-rose-600">${l.due} BDT</strong></p>
+      `;
+      document.getElementById('pay-amount').value = l.due;
+      document.getElementById('modal-pay').classList.remove('hidden');
+    } else if (act === 'fee-receipt-pdf') {
+      showFeeReceiptPdf(id);
+    }
+  });
+
+  document.getElementById('form-charge').addEventListener('submit', e => {
+    e.preventDefault();
+    const id = document.getElementById('chg-stu-id').value;
+    const s = state.students.find(x => x.id === id);
+    if (!s) return;
+    s.manualCharges = s.manualCharges || [];
+    s.manualCharges.push({
+      title: document.getElementById('chg-title').value.trim(),
+      amount: Number(document.getElementById('chg-amount').value) || 0
+    });
+    saveState();
+    pushToSheet({ action: 'addCharge', studentId: id, title: document.getElementById('chg-title').value.trim(), amount: Number(document.getElementById('chg-amount').value) || 0 });
+    document.getElementById('modal-charge').classList.add('hidden');
+    e.target.reset();
+    renderAll();
+    showToast('Manual charge added');
+  });
+
+  document.getElementById('form-pay').addEventListener('submit', e => {
+    e.preventDefault();
+    const id = document.getElementById('pay-stu-id').value;
+    const s = state.students.find(x => x.id === id);
+    if (!s) return;
+    const amt = Number(document.getElementById('pay-amount').value) || 0;
+    s.paidCurrent = (Number(s.paidCurrent) || 0) + amt;
+    saveState();
+    document.getElementById('modal-pay').classList.add('hidden');
+    renderAll();
+    showFeeReceiptPdf(id);
+    showToast('Collected ' + amt + ' BDT — WhatsApp receipt ready');
+  });
+
+  function syncExamFormUI() {
+    const exType = document.getElementById('ex-type').value;
+    const exClass = document.getElementById('ex-class').value;
+    const hasCq = exType.includes('CQ') || exType === 'Final Test';
+    const hasMcq = exType.includes('MCQ') || exType === 'Final Test';
+    const hasPrac = exType === 'Final Test';
+    document.getElementById('wrap-cq-max').classList.toggle('hidden', !hasCq);
+    document.getElementById('wrap-mcq-max').classList.toggle('hidden', !hasMcq);
+    document.getElementById('wrap-prac-max').classList.toggle('hidden', !hasPrac);
+    if (!hasCq) document.getElementById('ex-cq-max').value = '';
+    if (!hasMcq) document.getElementById('ex-mcq-max').value = '';
+    if (!hasPrac) document.getElementById('ex-prac-max').value = '';
+
+    if (exType.startsWith('Class Test')) {
+      const count = state.exams.filter(e =>
+        (e.classYear || 'HSC 1st Year') === exClass && (e.type || '').startsWith('Class Test')
+      ).length;
+      document.getElementById('ex-title').value = 'Class Test ' + (count + 1) + ' (' + exClass + ')';
+    } else {
+      document.getElementById('ex-title').value = exType + ' (' + exClass + ')';
+    }
+  }
+
+  document.getElementById('ex-type').addEventListener('change', syncExamFormUI);
+  document.getElementById('ex-class').addEventListener('change', syncExamFormUI);
+
+  document.getElementById('btn-post-exam').addEventListener('click', () => {
+    const title = document.getElementById('ex-title').value.trim();
+    const dt = document.getElementById('ex-datetime').value;
+    if (!title || !dt) {
+      showToast('Enter exam title and date/time');
+      return;
+    }
+    state.exams.unshift({
+      id: 'EX-' + (state.exams.length + 101),
+      title: title,
+      classYear: document.getElementById('ex-class').value,
+      type: document.getElementById('ex-type').value,
+      dateTime: dt,
+      branch: document.getElementById('ex-branch').value,
+      slot: document.getElementById('ex-slot').value,
+      cqMax: Number(document.getElementById('ex-cq-max').value) || 0,
+      mcqMax: Number(document.getElementById('ex-mcq-max').value) || 0,
+      pracMax: Number(document.getElementById('ex-prac-max').value) || 0,
+      syllabus: document.getElementById('ex-syllabus').value.trim(),
+      scores: {}
+    });
+    const newExId = state.exams[0].id;
+    saveState();
+    pushToSheet({ action: 'postExam', exam: state.exams[0] });
+    document.getElementById('ex-syllabus').value = '';
+    syncExamFormUI();
+    renderAll();
+    document.getElementById('select-exam-marks').value = newExId;
+    renderExamsTab(filteredStudents());
+    showToast('Exam posted — Student App 12h alarm armed');
+  });
+
+  document.getElementById('marks-entry-list').addEventListener('input', e => {
+    const sid = e.target.dataset.markId;
+    const eid = e.target.dataset.examId;
+    if (!sid || !eid) return;
+    const exam = state.exams.find(x => x.id === eid);
+    if (!exam) return;
+    exam.scores = exam.scores || {};
+    const part = e.target.dataset.part || 'cq';
+    const prev = exam.scores[sid] || { cq: 0, mcq: 0, prac: 0 };
+    prev[part] = Number(e.target.value) || 0;
+    exam.scores[sid] = prev;
+    saveState();
+    renderStudentView();
+  });
+
+  document.getElementById('btn-stu-admission-pdf').addEventListener('click', () => {
+    showAdmissionPdf(document.getElementById('student-portal-select').value);
+  });
+
+  document.getElementById('btn-stu-marksheet-pdf').addEventListener('click', () => {
+    showResultMarksheetPdf(document.getElementById('student-portal-select').value);
+  });
+
+  document.getElementById('btn-do-print').addEventListener('click', () => {
+    if (typeof CoachingBridge !== 'undefined') {
+      CoachingBridge.printCurrentPage(document.getElementById('print-modal-title').textContent || 'AbrarCoachingPDF');
+    } else {
+      window.print();
+    }
+  });
+
+  if (typeof CoachingBridge !== 'undefined') {
+    document.getElementById('install-app-banner').classList.add('hidden');
+  }
+
+  document.getElementById('btn-dismiss-install').addEventListener('click', () => {
+    document.getElementById('install-app-banner').classList.add('hidden');
+  });
+
+  document.getElementById('btn-install-app').addEventListener('click', () => {
+    document.getElementById('modal-install').classList.remove('hidden');
+  });
+
+  document.getElementById('btn-open-settings').addEventListener('click', () => {
+    renderSettingsModal();
+    document.getElementById('modal-settings').classList.remove('hidden');
+  });
+
+  document.getElementById('btn-save-fine-cfg').addEventListener('click', () => {
+    state.config.defaultAbsentFine = Number(document.getElementById('cfg-absent-fine').value) || 0;
+    saveState();
+    showToast('Default absent fine set to ' + state.config.defaultAbsentFine + ' BDT');
+  });
+
+  document.getElementById('form-add-slot').addEventListener('submit', e => {
+    e.preventDefault();
+    state.config.slots = state.config.slots || [];
+    state.config.slots.push({
+      name: document.getElementById('slot-name').value.trim(),
+      days: document.getElementById('slot-days').value.trim(),
+      time: document.getElementById('slot-time').value.trim()
+    });
+    saveState();
+    e.target.reset();
+    renderSettingsModal();
+    renderAll();
+    showToast('Custom batch slot added');
+  });
+
+  document.getElementById('custom-slots-list').addEventListener('click', e => {
+    const saveIdx = e.target.dataset.saveSlot;
+    if (saveIdx !== undefined) {
+      const i = Number(saveIdx);
+      state.config.slots[i].days = document.getElementById('edit-slot-days-' + i).value.trim();
+      state.config.slots[i].time = document.getElementById('edit-slot-time-' + i).value.trim();
+      saveState();
+      renderSettingsModal();
+      renderAll();
+      showToast(state.config.slots[i].name + ' schedule updated');
+      return;
+    }
+    const idx = e.target.dataset.delSlot;
+    if (idx === undefined) return;
+    state.config.slots.splice(Number(idx), 1);
+    saveState();
+    renderSettingsModal();
+    renderAll();
+  });
+
+  document.getElementById('adm-branch').addEventListener('change', syncSlotDropdowns);
+
+  document.getElementById('form-add-ht').addEventListener('submit', e => {
+    e.preventDefault();
+    state.config.homeTuitions = getHomeTuitions();
+    state.config.homeTuitions.push({
+      name: document.getElementById('ht-name').value.trim(),
+      days: document.getElementById('ht-days').value.trim(),
+      time: document.getElementById('ht-time').value.trim(),
+      location: document.getElementById('ht-loc').value.trim()
+    });
+    saveState();
+    e.target.reset();
+    renderSettingsModal();
+    renderAll();
+    showToast('Home Tuition slot added');
+  });
+
+  document.getElementById('home-tuitions-list').addEventListener('click', e => {
+    const saveIdx = e.target.dataset.saveHt;
+    if (saveIdx !== undefined) {
+      const i = Number(saveIdx);
+      state.config.homeTuitions[i] = {
+        name: document.getElementById('edit-ht-name-' + i).value.trim(),
+        days: document.getElementById('edit-ht-days-' + i).value.trim(),
+        time: document.getElementById('edit-ht-time-' + i).value.trim(),
+        location: document.getElementById('edit-ht-loc-' + i).value.trim()
+      };
+      saveState();
+      renderSettingsModal();
+      renderAll();
+      showToast('Home Tuition updated');
+      return;
+    }
+    const delIdx = e.target.dataset.delHt;
+    if (delIdx !== undefined) {
+      state.config.homeTuitions.splice(Number(delIdx), 1);
+      saveState();
+      renderSettingsModal();
+      renderAll();
+    }
+  });
+
+  syncExamFormUI();
+  renderAll();
+})();
+</script>
+</body>
+</html>
