@@ -1428,7 +1428,10 @@ ${pdfHeaderHtml("Official Fee Receipt", "")}
           <input id="p-fee-${p.tempId}" type="number" value="1500" class="w-20 border border-slate-200 rounded px-2 py-1">
           <label>Scholarship</label>
           <input id="p-sch-${p.tempId}" type="number" value="0" class="w-20 border border-slate-200 rounded px-2 py-1">
-          <button data-approve-pending="${p.tempId}" class="ml-auto px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-semibold">Approve &amp; Generate ID</button>
+          <div class="ml-auto flex gap-1.5">
+            <button data-delete-pending="${p.tempId}" class="px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 font-semibold border border-rose-200">Delete</button>
+            <button data-approve-pending="${p.tempId}" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-semibold">Approve &amp; Generate ID</button>
+          </div>
         </div>
       </div>
     `).join('');
@@ -1602,6 +1605,18 @@ ${pdfHeaderHtml("Official Fee Receipt", "")}
   });
 
   document.getElementById('pending-list').addEventListener('click', e => {
+    const delTid = e.target.dataset.deletePending;
+    if (delTid) {
+      const idx = state.pendingAdmissions.findIndex(p => p.tempId === delTid);
+      if (idx === -1) return;
+      const p = state.pendingAdmissions.splice(idx, 1)[0];
+      saveState();
+      pushToSheet({ action: 'deletePendingForm', name: p.name, guardianWa: p.guardianWa });
+      renderPendingModal();
+      renderAll();
+      showToast('Removed pending form for ' + p.name);
+      return;
+    }
     const tid = e.target.dataset.approvePending;
     if (!tid) return;
     const idx = state.pendingAdmissions.findIndex(p => p.tempId === tid);
