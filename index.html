@@ -500,6 +500,13 @@
           <button id="btn-save-fine-cfg" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white font-semibold">Save Default Fine</button>
         </div>
       </div>
+      <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
+        <label class="block font-bold text-slate-800">Teacher Login Password (matches Code.gs TEACHER_PIN)</label>
+        <div class="flex gap-2">
+          <input id="cfg-teacher-pass" type="text" placeholder="New password" class="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 bg-white font-semibold">
+          <button id="btn-save-pass-cfg" class="px-3 py-1.5 rounded-lg bg-slate-900 text-white font-semibold">Save Password</button>
+        </div>
+      </div>
       <div class="space-y-2">
         <h3 class="font-bold text-slate-800">Coaching Batch Slots (GEC &amp; Chawkbazar)</h3>
         <div id="custom-slots-list" class="space-y-1.5"></div>
@@ -567,6 +574,7 @@
       formUrl: 'https://docs.google.com/forms/d/e/abrar-math-admission/viewform',
       scriptUrl: 'https://script.google.com/macros/s/AKfycbxXZO9t4kxhhxybQP42hFE4IL9zGWckqmqwBzMq3_2FaEQAAtBitQkM5ivyJWt0DKr6gA/exec',
       defaultAbsentFine: 50,
+      teacherPassword: 'abrar2026',
       slots: [
         { name: 'Slot A', days: 'Sat, Mon, Wed', time: '3:30 PM' },
         { name: 'Slot B', days: 'Sun, Tue, Thu', time: '3:30 PM' },
@@ -721,7 +729,7 @@
       await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(Object.assign({ mobile: '01616397272', password: 'abrar2026' }, payload))
+        body: JSON.stringify(Object.assign({ mobile: '01616397272', password: (state.config && state.config.teacherPassword) || 'abrar2026' }, payload))
       });
     } catch (e) {}
   }
@@ -730,7 +738,7 @@
     const url = (state.config && state.config.scriptUrl) || '';
     if (!url) return;
     try {
-      const res = await fetch(url + '?action=teacherSync&mobile=01616397272&password=abrar2026');
+      const res = await fetch(url + '?action=teacherSync&mobile=01616397272&password=' + encodeURIComponent((state.config && state.config.teacherPassword) || 'abrar2026'));
       const data = await res.json();
       if (data && data.ok && Array.isArray(data.students) && data.students.length) {
         showToast('Synced ' + data.students.length + ' students from Google Sheet');
@@ -909,6 +917,7 @@
 
   function renderSettingsModal() {
     document.getElementById('cfg-absent-fine').value = state.config.defaultAbsentFine ?? 50;
+    document.getElementById('cfg-teacher-pass').value = (state.config && state.config.teacherPassword) || 'abrar2026';
     const slots = state.config.slots || [];
     document.getElementById('custom-slots-list').innerHTML = slots.map((sl, idx) => `
       <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-1.5">
@@ -1428,7 +1437,8 @@ ${pdfHeaderHtml("Official Fee Receipt", "")}
     e.preventDefault();
     const mob = normPhone(document.getElementById('login-teacher-mobile').value);
     const pass = document.getElementById('login-teacher-pass').value;
-    if (mob !== '01616397272' || pass !== 'abrar2026') {
+    const expectedPass = (state.config && state.config.teacherPassword) || 'abrar2026';
+    if (mob !== '01616397272' || pass !== expectedPass) {
       showToast('Invalid teacher mobile or password');
       return;
     }
@@ -1793,6 +1803,14 @@ ${pdfHeaderHtml("Official Fee Receipt", "")}
   document.getElementById('btn-open-settings').addEventListener('click', () => {
     renderSettingsModal();
     document.getElementById('modal-settings').classList.remove('hidden');
+  });
+
+  document.getElementById('btn-save-pass-cfg').addEventListener('click', () => {
+    const np = document.getElementById('cfg-teacher-pass').value.trim();
+    if (!np) { showToast('Password cannot be empty'); return; }
+    state.config.teacherPassword = np;
+    saveState();
+    showToast('Teacher password updated');
   });
 
   document.getElementById('btn-save-fine-cfg').addEventListener('click', () => {
