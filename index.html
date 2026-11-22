@@ -1845,15 +1845,23 @@ ${pdfHeaderHtml("Official Fee Receipt", "")}
     saveState();
     pushToSheet({ action: 'postExam', exam: state.exams[0] });
     document.getElementById('ex-syllabus').value = '';
-    document.getElementById('btn-theme-toggle').addEventListener('click', () => {
+    (function initTheme() {
+    try {
+      const saved = localStorage.getItem('amc_theme');
+      if (saved === 'dark' || saved === 'light') {
+        document.documentElement.classList.add(saved);
+      }
+    } catch (e) {}
+  })();
+
+  document.getElementById('btn-theme-toggle').addEventListener('click', () => {
     const root = document.documentElement;
-    if (root.classList.contains('dark')) {
-      root.classList.remove('dark');
-      root.classList.add('light');
-    } else {
-      root.classList.remove('light');
-      root.classList.add('dark');
-    }
+    const sysDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const currentlyDark = root.classList.contains('dark') || (!root.classList.contains('light') && sysDark);
+    const next = currentlyDark ? 'light' : 'dark';
+    root.classList.remove('dark', 'light');
+    root.classList.add(next);
+    try { localStorage.setItem('amc_theme', next); } catch (e) {}
   });
 
   syncExamFormUI();
