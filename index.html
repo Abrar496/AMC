@@ -781,10 +781,19 @@
     try {
       const res = await fetch(url + '?action=teacherSync&mobile=01616397272&password=' + encodeURIComponent((state.config && state.config.teacherPassword) || 'abrar2026'));
       const data = await res.json();
-      if (data && data.ok && Array.isArray(data.students) && data.students.length) {
-        showToast('Synced ' + data.students.length + ' students from Google Sheet');
-      } else if (data && data.ok) {
-        showToast('Connected to Google Sheet');
+      if (data && data.ok) {
+        if (Array.isArray(data.pendingAdmissions)) {
+          state.pendingAdmissions = data.pendingAdmissions;
+        }
+        if (Array.isArray(data.students) && data.students.length) {
+          state.students = data.students.map(st => Object.assign({ manualCharges: [], attendance: {} }, st));
+        }
+        saveState();
+        renderAll();
+        if (!document.getElementById('modal-pending').classList.contains('hidden')) renderPendingModal();
+        showToast('Synced: ' + (state.pendingAdmissions.length) + ' pending forms, ' + state.students.length + ' students');
+      } else if (data && data.error) {
+        showToast('Sync error: ' + data.error);
       }
     } catch (e) {
       showToast('Using offline data (Sheet sync unavailable here)');
@@ -1589,6 +1598,7 @@ ${pdfHeaderHtml("Official Fee Receipt", "")}
   document.getElementById('btn-open-pending').addEventListener('click', () => {
     renderPendingModal();
     document.getElementById('modal-pending').classList.remove('hidden');
+    syncTeacherFromSheet();
   });
 
   document.getElementById('pending-list').addEventListener('click', e => {
@@ -1621,6 +1631,7 @@ ${pdfHeaderHtml("Official Fee Receipt", "")}
     });
     state.pendingAdmissions.splice(idx, 1);
     saveState();
+    pushToSheet({ action: 'addStudent', student: state.students[0] });
     renderPendingModal();
     renderAll();
     showToast('Approved ' + p.name + ' as ' + newId);
@@ -1891,9 +1902,10 @@ ${pdfHeaderHtml("Official Fee Receipt", "")}
       state.config.slots[i].days = document.getElementById('edit-slot-days-' + i).value.trim();
       state.config.slots[i].time = document.getElementById('edit-slot-time-' + i).value.trim();
       saveState();
+      pushToSheet({ action: 'updateFormSlots', slots: state.config.slots, homeTuitions: getHomeTuitions() });
       renderSettingsModal();
       renderAll();
-      showToast(state.config.slots[i].name + ' schedule updated');
+      showToast(state.config.slots[i].name + ' schedule updated & synced to Form');
       return;
     }
     const idx = e.target.dataset.delSlot;
