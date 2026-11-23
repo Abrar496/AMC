@@ -103,7 +103,7 @@
       </div>
       <div>
         <label class="block font-semibold muted mb-1.5">Password</label>
-        <input id="login-teacher-pass" type="password" required placeholder="Password (demo: abrar2026)" class="inp w-full border rounded-xl px-4 py-3 text-sm">
+        <input id="login-teacher-pass" type="password" required placeholder="Enter Teacher Password" class="inp w-full border rounded-xl px-4 py-3 text-sm">
       </div>
       <button type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold text-sm shadow-lg">SIGN IN TO DASHBOARD &rarr;</button>
       <button id="btn-open-home-pass" type="button" class="w-full py-2.5 rounded-xl surface-2 border muted font-semibold text-xs">Change Teacher Password</button>
@@ -702,13 +702,14 @@
 <script>
 (function() {
   const STORAGE_KEY = 'amc_portal_state_v1';
+  const QUEUE_KEY = 'amc_push_queue_v1';
+  let activeTeacherPass = '';
 
   const defaultState = {
     config: {
-      formUrl: 'https://docs.google.com/forms/d/e/abrar-math-admission/viewform',
+      formUrl: '',
       scriptUrl: 'https://script.google.com/macros/s/AKfycbxXZO9t4kxhhxybQP42hFE4IL9zGWckqmqwBzMq3_2FaEQAAtBitQkM5ivyJWt0DKr6gA/exec',
       defaultAbsentFine: 50,
-      teacherPassword: 'abrar2026',
       classes: ['HSC 1st Year', 'HSC 2nd Year', 'SSC 27', 'SSC 26', 'Class 10', 'Class 9'],
       slots: [
         { name: 'Slot A', days: 'Sat, Mon, Wed', time: '3:30 PM' },
@@ -815,6 +816,23 @@
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
   }
 
+  function escapeHtml(str) {
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function loadQueue() {
+    try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); } catch (_) { return []; }
+  }
+
+  function saveQueue(q) {
+    try { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); } catch (_) {}
+  }
+
   function normPhone(p) {
     let d = String(p || '').replace(/\D/g, '');
     if (d.startsWith('880')) d = '0' + d.slice(3);
@@ -837,16 +855,46 @@
     return 'https://wa.me/' + clean + '?text=' + encodeURIComponent(text);
   }
 
+  async function flushPushQueue() {
+    const url = (state.config && state.config.scriptUrl) || '';
+    if (!url || !activeTeacherPass) return true;
+    const q = loadQueue();
+    if (!q.length) return true;
+    const remaining = [];
+    for (let i = 0; i < q.length; i++) {
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(Object.assign({ mobile: '01616397272', password: activeTeacherPass }, q[i]))
+        });
+        const out = await res.json();
+        if (!out || !out.ok) remaining.push(q[i]);
+      } catch (_) {
+        remaining.push(q[i]);
+      }
+    }
+    saveQueue(remaining);
+    return remaining.length === 0;
+  }
+
   async function pushToSheet(payload) {
     const url = (state.config && state.config.scriptUrl) || '';
-    if (!url) return;
+    if (!url || !activeTeacherPass) return;
     try {
-      await fetch(url, {
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(Object.assign({ mobile: '01616397272', password: (state.config && state.config.teacherPassword) || 'abrar2026' }, payload))
+        body: JSON.stringify(Object.assign({ mobile: '01616397272', password: activeTeacherPass }, payload))
       });
-    } catch (e) {}
+      const out = await res.json();
+      if (!out || !out.ok) throw new Error('Push rejected');
+    } catch (_) {
+      const q = loadQueue();
+      q.push(payload);
+      saveQueue(q);
+      showToast('Saved offline — will sync when online (' + q.length + ' queued)');
+    }
   }
 
   function applySheetPayload(data) {
@@ -883,9 +931,18 @@
 
   async function syncTeacherFromSheet() {
     const url = (state.config && state.config.scriptUrl) || '';
-    if (!url) return;
+    if (!url || !activeTeacherPass) return false;
     try {
-      const res = await fetch(url + '?action=teacherSync&mobile=01616397272&password=' + encodeURIComponent((state.config && state.config.teacherPassword) || 'abrar2026'));
+      const flushed = await flushPushQueue();
+      if (!flushed) {
+        showToast('Offline changes waiting to sync — skipped overwrite');
+        return false;
+      }
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'teacherSync', mobile: '01616397272', password: activeTeacherPass })
+      });
       const data = await res.json();
       if (data && data.ok) {
         applySheetPayload(data);
@@ -893,12 +950,15 @@
         renderAll();
         if (!document.getElementById('modal-pending').classList.contains('hidden')) renderPendingModal();
         showToast('Synced: ' + state.pendingAdmissions.length + ' pending, ' + state.students.length + ' students');
+        return true;
       } else if (data && data.error) {
-        showToast('Sync error: ' + data.error);
+        showToast(data.error);
+        return false;
       }
     } catch (e) {
-      showToast('Using offline data');
+      showToast('Offline mode — local data active');
     }
+    return false;
   }
 
   function nextStudentId(branch, joiningMonth) {
@@ -1078,7 +1138,7 @@
                   <span class="mono text-[11px] font-bold text-cyan-400 bg-cyan-500/15 px-2 py-0.5 rounded-lg">${s.id}</span>
                   <span class="text-[11px] muted">${formatStudentSlot(s)}</span>
                 </div>
-                <h3 class="text-sm font-bold text-white-adapt mt-1">${s.name}</h3>
+                <h3 class="text-sm font-bold text-white-adapt mt-1">${escapeHtml(s.name)}</h3>
                 <p class="text-[11px] muted">${s.classYear} &bull; Joined ${String(s.joiningMonth || '').slice(0, 7)}</p>
               </div>
             </div>
@@ -1122,7 +1182,7 @@
           <div class="flex items-center gap-3">
             ${avatarHtml(s)}
             <div>
-              <p class="text-sm font-bold text-white-adapt">${s.name} <span class="mono text-xs muted font-normal">${s.id}</span></p>
+              <p class="text-sm font-bold text-white-adapt">${escapeHtml(s.name)} <span class="mono text-xs muted font-normal">${s.id}</span></p>
               <p class="text-xs muted">${formatStudentSlot(s)} &bull; ${s.classYear}</p>
             </div>
           </div>
@@ -1154,7 +1214,7 @@
           <div class="space-y-1">
             <div class="flex items-center gap-2">
               <span class="mono text-xs font-bold text-cyan-400">${s.id}</span>
-              <span class="text-sm font-bold text-white-adapt">${s.name}</span>
+              <span class="text-sm font-bold text-white-adapt">${escapeHtml(s.name)}</span>
             </div>
             <p class="text-xs muted">Prev: <strong>${l.prevDue}</strong> + ${l.isCycle ? `Cycle (${l.presentCount}/${l.cycleTarget})` : 'Fee'}: <strong>${l.netFee}</strong> + Fine: <strong>${l.fine}</strong> + Manual: <strong>${l.manualTotal}</strong> &minus; Paid: <strong>${l.paid}</strong></p>
           </div>
@@ -1191,7 +1251,7 @@
       return `
         <div class="surface-2 border rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
           <div>
-            <p class="font-bold text-white-adapt">${s.name}</p>
+            <p class="font-bold text-white-adapt">${escapeHtml(s.name)}</p>
             <p class="mono muted">${s.id}</p>
           </div>
           <div class="flex flex-wrap items-center gap-1.5">
@@ -1253,7 +1313,7 @@
       return `
         <div class="surface-2 border rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
           <div>
-            <p class="font-bold text-white-adapt">${e.title}</p>
+            <p class="font-bold text-white-adapt">${escapeHtml(e.title)}</p>
             <p class="muted">${e.dateTime.replace('T', ' ')} &bull; ${e.syllabus || 'TBA'}</p>
           </div>
           <p class="mono font-semibold text-cyan-400">Alarm: ${isNaN(alarmTime) ? '12h before' : alarmTime.toLocaleString()}</p>
@@ -1451,7 +1511,7 @@
     box.innerHTML = state.pendingAdmissions.map(p => `
       <div class="surface-2 border rounded-xl p-3 space-y-2 text-xs">
         <div class="flex justify-between">
-          <strong class="text-white-adapt">${p.name} (${p.classYear})</strong>
+          <strong class="text-white-adapt">${escapeHtml(p.name)} (${escapeHtml(p.classYear)})</strong>
           <span class="muted">${p.branch} &bull; ${p.slot}</span>
         </div>
         <p class="muted">Guardian WA: ${p.guardianWa} &bull; Email: ${p.email}</p>
@@ -1469,7 +1529,7 @@
 
   function renderSettingsModal() {
     document.getElementById('cfg-absent-fine').value = state.config.defaultAbsentFine ?? 50;
-    document.getElementById('cfg-teacher-pass').value = (state.config && state.config.teacherPassword) || 'abrar2026';
+    document.getElementById('cfg-teacher-pass').value = '';
     document.getElementById('custom-classes-list').innerHTML = getClasses().map((c, idx) => `
       <span class="surface-2 border rounded-lg px-2.5 py-1 text-xs font-semibold flex items-center gap-1.5">
         ${c}
@@ -1595,22 +1655,43 @@
     }
   });
 
-  document.getElementById('form-teacher-login').addEventListener('submit', e => {
+  document.getElementById('form-teacher-login').addEventListener('submit', async e => {
     e.preventDefault();
     const mob = normPhone(document.getElementById('login-teacher-mobile').value);
     const pass = document.getElementById('login-teacher-pass').value;
-    const expectedPass = (state.config && state.config.teacherPassword) || 'abrar2026';
-    if (mob !== '01616397272' || pass !== expectedPass) { showToast('Invalid teacher mobile or password'); return; }
+    if (mob !== '01616397272' || !pass) { showToast('Invalid teacher mobile or password'); return; }
+    const url = (state.config && state.config.scriptUrl) || '';
+    if (url) {
+      try {
+        showToast('Verifying...');
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'teacherSync', mobile: mob, password: pass })
+        });
+        const data = await res.json();
+        if (!data || !data.ok) { showToast((data && data.error) || 'Invalid password'); return; }
+        activeTeacherPass = pass;
+        if (loadQueue().length === 0) applySheetPayload(data);
+        else await flushPushQueue();
+        saveState();
+      } catch (_) {
+        activeTeacherPass = pass;
+        showToast('Offline login — sync when online');
+      }
+    } else {
+      activeTeacherPass = pass;
+    }
     document.getElementById('login-view').classList.add('hidden');
     document.getElementById('student-view').classList.add('hidden');
     document.getElementById('teacher-view').classList.remove('hidden');
     document.getElementById('btn-logout').classList.remove('hidden');
     switchTeacherTab('home');
     renderAll();
-    syncTeacherFromSheet();
   });
 
   document.getElementById('btn-logout').addEventListener('click', () => {
+    activeTeacherPass = '';
     document.getElementById('teacher-view').classList.add('hidden');
     document.getElementById('student-view').classList.add('hidden');
     document.getElementById('login-view').classList.remove('hidden');
@@ -1709,7 +1790,7 @@
       if (idx === -1) return;
       const p = state.pendingAdmissions.splice(idx, 1)[0];
       saveState();
-      pushToSheet({ action: 'deletePendingForm', name: p.name, guardianWa: p.guardianWa });
+      pushToSheet({ action: 'deletePendingForm', tempId: p.tempId, name: p.name, guardianWa: p.guardianWa });
       renderPendingModal(); renderAll(); return;
     }
     const tid = e.target.dataset.approvePending;
@@ -1727,7 +1808,7 @@
     });
     state.pendingAdmissions.splice(idx, 1);
     saveState();
-    pushToSheet({ action: 'addStudent', student: state.students[0] });
+    pushToSheet({ action: 'addStudent', tempId: p.tempId, student: state.students[0] });
     renderPendingModal(); renderAll();
     showToast('Approved ' + p.name + ' as ' + newId);
   });
@@ -1865,7 +1946,7 @@
     const amt = Number(document.getElementById('pay-amount').value) || 0;
     s.paidCurrent = (Number(s.paidCurrent) || 0) + amt;
     saveState();
-    pushToSheet({ action: 'collectPayment', studentId: id, paidCurrent: s.paidCurrent, manualAbsentFine: s.manualAbsentFine || 0 }); document.getElementById('modal-pay').classList.add('hidden');
+    pushToSheet({ action: 'collectPayment', studentId: id, amountDelta: amt, paidCurrent: s.paidCurrent, manualAbsentFine: s.manualAbsentFine || 0 }); document.getElementById('modal-pay').classList.add('hidden');
     renderAll(); showFeeReceiptPdf(id);
   });
 
@@ -1974,7 +2055,7 @@
     const np = document.getElementById('cfg-teacher-pass').value.trim();
     if (!np) return;
     pushToSheet({ action: 'changeTeacherPassword', newPassword: np });
-    state.config.teacherPassword = np; saveState(); showToast('Password updated');
+    activeTeacherPass = np; showToast('Password updated');
   });
 
   document.getElementById('btn-save-fine-cfg').addEventListener('click', () => {
@@ -2040,13 +2121,24 @@
   });
 
   document.getElementById('btn-open-home-pass').addEventListener('click', () => document.getElementById('modal-change-pass').classList.remove('hidden'));
-  document.getElementById('form-home-pass').addEventListener('submit', e => {
+  document.getElementById('form-home-pass').addEventListener('submit', async e => {
     e.preventDefault();
     const oldP = document.getElementById('home-old-pass').value, newP = document.getElementById('home-new-pass').value.trim();
-    if (oldP !== ((state.config && state.config.teacherPassword) || 'abrar2026')) { showToast('Current password incorrect'); return; }
-    pushToSheet({ action: 'changeTeacherPassword', newPassword: newP });
-    state.config.teacherPassword = newP; saveState(); e.target.reset();
-    document.getElementById('modal-change-pass').classList.add('hidden'); showToast('Password changed');
+    const url = (state.config && state.config.scriptUrl) || '';
+    if (!url) { showToast('Set Script URL first'); return; }
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'changeTeacherPassword', mobile: '01616397272', password: oldP, newPassword: newP })
+      });
+      const data = await res.json();
+      if (!data || !data.ok) { showToast((data && data.error) || 'Current password incorrect'); return; }
+      activeTeacherPass = newP;
+      e.target.reset();
+      document.getElementById('modal-change-pass').classList.add('hidden');
+      showToast('Password updated on server');
+    } catch (_) { showToast('Network error updating password'); }
   });
 
   document.getElementById('btn-confirm-del-stu').addEventListener('click', () => {
