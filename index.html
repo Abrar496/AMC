@@ -368,7 +368,7 @@
         <img id="adm-photo-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Crect width='64' height='64' fill='%231e293b'/%3E%3Ctext x='50%25' y='54%25' text-anchor='middle' font-size='11' fill='%2394a3b8' font-family='sans-serif'%3EPhoto%3C/text%3E%3C/svg%3E" alt="Preview" class="w-16 h-16 rounded-xl object-cover border border-slate-600">
         <div class="space-y-1">
           <label class="block font-semibold">Student Photo</label>
-          <input id="adm-photo" type="file" accept="image/*" class="text-xs">
+          <input id="adm-photo" type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png" class="text-xs">
         </div>
       </div>
       <div class="sm:col-span-2">
@@ -637,7 +637,7 @@
         <img id="reg-photo-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56'%3E%3Crect width='56' height='56' fill='%231e293b'/%3E%3Ctext x='50%25' y='54%25' text-anchor='middle' font-size='10' fill='%2394a3b8' font-family='sans-serif'%3EPhoto%3C/text%3E%3C/svg%3E" alt="Preview" class="w-14 h-14 rounded-xl object-cover border border-slate-600">
         <div>
           <label class="block font-semibold mb-1">Student Photo (Optional)</label>
-          <input id="reg-photo" type="file" accept="image/*" class="text-xs">
+          <input id="reg-photo" type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png" class="text-xs">
         </div>
       </div>
       <div class="sm:col-span-2">
@@ -840,6 +840,36 @@
     return d;
   }
 
+  function compressImageFile(file, callback) {
+    if (!file) return;
+    const valid = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (file.type && !valid.includes(file.type.toLowerCase())) {
+      showToast('Please select a JPG, JPEG, or PNG photo');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 300;
+        let w = img.width, h = img.height;
+        if (w > h && w > maxDim) { h = Math.round(h * maxDim / w); w = maxDim; }
+        else if (h >= w && h > maxDim) { w = Math.round(w * maxDim / h); h = maxDim; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        const compressed = canvas.toDataURL('image/jpeg', 0.72);
+        callback(compressed);
+        showToast('Photo compressed & ready');
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
   function showToast(msg) {
     const t = document.getElementById('toast');
     t.textContent = msg;
@@ -900,8 +930,14 @@
   function applySheetPayload(data) {
     if (Array.isArray(data.pendingAdmissions)) state.pendingAdmissions = data.pendingAdmissions;
     if (Array.isArray(data.students) && data.students.length) {
-      state.students = data.students.map(st => {
-        const obj = Object.assign({ manualCharges: [], attendance: {}, photo: st.photoUrl || st.photo || '' }, st);
+      const seenStu = new Set();
+      state.students = data.students.filter(st => {
+        const k = String(st.id || '') + '|' + String(st.name || '').trim().toLowerCase() + '|' + normPhone(st.guardianWa);
+        if (seenStu.has(k)) return false;
+        seenStu.add(k);
+        return true;
+      }).map(st => {
+        const obj = Object.assign({ manualCharges: [], attendance: {}, photo: st.photoUrl || st.photo || '' }, st, { studentWa: normPhone(st.studentWa), guardianWa: normPhone(st.guardianWa) });
         if (Array.isArray(data.attendance)) {
           data.attendance.filter(a => String(a.studentId) === String(obj.id)).forEach(a => {
             const dtStr = String(a.date || '').slice(0, 10);
@@ -1149,12 +1185,12 @@
           <div class="text-xs muted space-y-1.5 border-t border-slate-700/40 pt-2.5">
             <div>${l.isCycle ? `By Day (${l.presentCount}/${l.cycleTarget} Classes): <strong class="text-white-adapt">${l.netFee} BDT</strong>` : `Monthly Fee: <strong class="text-white-adapt">${l.netFee} BDT</strong>${s.scholarship > 0 ? ' (Schol: -' + s.scholarship + ')' : ''}`}</div>
             <div class="flex flex-wrap items-center gap-2">
-              <span>Student: <strong class="text-white-adapt">${s.studentWa || '—'}</strong></span>
-              ${s.studentWa ? `<a href="tel:${s.studentWa}" class="px-2 py-0.5 rounded-lg surface-2 border font-semibold">Call</a><a href="${waUrl(s.studentWa, `Assalamu Alaikum ${s.name}, update from Abrar Math Coaching (${s.id}).`)}" target="_blank" rel="noopener noreferrer" class="px-2 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-400 font-semibold">WA</a>` : ''}
+              <span>Student: <strong class="text-white-adapt">${normPhone(s.studentWa) || '—'}</strong></span>
+              ${s.studentWa ? `<a href="tel:${normPhone(s.studentWa)}" class="px-2 py-0.5 rounded-lg surface-2 border font-semibold">Call</a><a href="${waUrl(s.studentWa, `Assalamu Alaikum ${s.name}, update from Abrar Math Coaching (${s.id}).`)}" target="_blank" rel="noopener noreferrer" class="px-2 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-400 font-semibold">WA</a>` : ''}
             </div>
             <div class="flex flex-wrap items-center gap-2">
-              <span>Guardian: <strong class="text-white-adapt">${s.guardianWa || '—'}</strong></span>
-              ${s.guardianWa ? `<a href="tel:${s.guardianWa}" class="px-2 py-0.5 rounded-lg surface-2 border font-semibold">Call</a><a href="${waUrl(s.guardianWa, `Assalamu Alaikum, update regarding ${s.name} (${s.id}) from Abrar Math Coaching (${s.branch}). Attendance: ${l.presentCount}P/${l.absentCount}A, Due: ${l.due} BDT.`)}" target="_blank" rel="noopener noreferrer" class="px-2 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-400 font-semibold">WA Message</a>` : ''}
+              <span>Guardian: <strong class="text-white-adapt">${normPhone(s.guardianWa) || '—'}</strong></span>
+              ${s.guardianWa ? `<a href="tel:${normPhone(s.guardianWa)}" class="px-2 py-0.5 rounded-lg surface-2 border font-semibold">Call</a><a href="${waUrl(s.guardianWa, `Assalamu Alaikum, update regarding ${s.name} (${s.id}) from Abrar Math Coaching (${s.branch}). Attendance: ${l.presentCount}P/${l.absentCount}A, Due: ${l.due} BDT.`)}" target="_blank" rel="noopener noreferrer" class="px-2 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-400 font-semibold">WA Message</a>` : ''}
             </div>
           </div>
           <div class="flex flex-wrap gap-1.5 pt-1">
@@ -1349,8 +1385,11 @@
     el.innerHTML = '<div class="mono text-[11px] p-2 border rounded">QR: ' + text + '</div>';
   }
 
-  function openPrintModal(title, html) {
+  let activePdfGuardianPhone = '';
+
+  function openPrintModal(title, html, guardianPhone) {
     activePdfTitle = title || 'AbrarCoachingDocument';
+    activePdfGuardianPhone = normPhone(guardianPhone || '');
     document.getElementById('print-modal-title').textContent = title;
     document.getElementById('print-sheet').innerHTML = html;
     document.getElementById('modal-print').classList.remove('hidden');
@@ -1387,8 +1426,8 @@
             <p><strong>Full Name:</strong> ${s.name}</p>
             <p><strong>Class &amp; Slot:</strong> ${s.classYear} &bull; ${formatStudentSlot(s)}</p>
             <p><strong>Joining Month:</strong> ${String(s.joiningMonth || '').slice(0, 7)}</p>
-            <p><strong>Student WhatsApp:</strong> ${s.studentWa}</p>
-            <p><strong>Guardian WhatsApp:</strong> ${s.guardianWa}</p>
+            <p><strong>Student WhatsApp:</strong> ${normPhone(s.studentWa)}</p>
+            <p><strong>Guardian WhatsApp:</strong> ${normPhone(s.guardianWa)}</p>
             <p><strong>Email:</strong> ${s.email || '—'}</p>
           </div>
           ${s.photo ? `<img src="${s.photo}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #cbd5e1;">` : ''}
@@ -1404,7 +1443,7 @@
         </div>
       </div>
     `;
-    openPrintModal('Admission Form — ' + s.id, html);
+    openPrintModal('Admission Form — ' + s.id, html, s.guardianWa);
     setTimeout(() => renderQr('pdf-qr-target', JSON.stringify({ id: s.id, branch: s.branch, slot: s.slot }), 72), 50);
   }
 
@@ -1430,7 +1469,7 @@
         <p>Attendance: ${Object.values(s.attendance || {}).filter(v => v === 'P').length} Present, ${l.absentCount} Absent (${l.fine} BDT Fine).</p>
       </div>
     `;
-    openPrintModal('Result Marksheet — ' + s.id, html);
+    openPrintModal('Result Marksheet — ' + s.id, html, s.guardianWa);
     setTimeout(() => renderQr('pdf-qr-target', JSON.stringify({ id: s.id, doc: 'marksheet' }), 72), 50);
   }
 
@@ -1455,7 +1494,7 @@
         </div>
       </div>
     `;
-    openPrintModal('Monthly Performance — ' + s.id, html);
+    openPrintModal('Monthly Performance — ' + s.id, html, s.guardianWa);
   }
 
   function showFeeReceiptPdf(id) {
@@ -1472,7 +1511,7 @@
         <p class="text-sm font-bold border-t pt-2">Total Paid: ${l.paid} BDT &bull; Remaining Due: ${l.due} BDT</p>
       </div>
     `;
-    openPrintModal('Fee Receipt — ' + s.id, html);
+    openPrintModal('Fee Receipt — ' + s.id, html, s.guardianWa);
   }
 
   function showTeacherCalendarModal(id) {
@@ -1499,7 +1538,7 @@
         <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center;">${cells}</div>
       </div>
     `;
-    openPrintModal('Attendance Calendar — ' + s.name, html);
+    openPrintModal('Attendance Calendar — ' + s.name, html, s.guardianWa);
   }
 
   function renderPendingModal() {
@@ -1727,11 +1766,10 @@
   });
 
   document.getElementById('adm-photo').addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => { pendingPhotoDataUrl = ev.target.result; document.getElementById('adm-photo-preview').src = pendingPhotoDataUrl; };
-    reader.readAsDataURL(file);
+    compressImageFile(e.target.files[0], dataUrl => {
+      pendingPhotoDataUrl = dataUrl;
+      document.getElementById('adm-photo-preview').src = dataUrl;
+    });
   });
 
   document.getElementById('form-admission').addEventListener('submit', e => {
@@ -1798,6 +1836,18 @@
     const idx = state.pendingAdmissions.findIndex(p => p.tempId === tid);
     if (idx === -1) return;
     const p = state.pendingAdmissions[idx];
+    const dupExists = state.students.some(st =>
+      String(st.name || '').trim().toLowerCase() === String(p.name || '').trim().toLowerCase() &&
+      normPhone(st.guardianWa) === normPhone(p.guardianWa)
+    );
+    if (dupExists) {
+      state.pendingAdmissions.splice(idx, 1);
+      saveState();
+      pushToSheet({ action: 'deletePendingForm', tempId: p.tempId, name: p.name, guardianWa: p.guardianWa });
+      renderPendingModal(); renderAll();
+      showToast(p.name + ' is already enrolled — removed duplicate pending entry');
+      return;
+    }
     const newId = nextStudentId(p.branch, p.joiningMonth);
     state.students.unshift({
       id: newId, name: p.name, classYear: p.classYear, branch: p.branch, slot: p.slot,
@@ -2031,7 +2081,7 @@
       const worker = html2pdf().set({ margin: 8, filename: safeName + '.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(el);
       if (typeof CoachingBridge !== 'undefined' && CoachingBridge.sharePdfBase64) {
         const dataUri = await worker.outputPdf('datauristring');
-        CoachingBridge.sharePdfBase64(dataUri, safeName);
+        CoachingBridge.sharePdfBase64(dataUri, safeName, activePdfGuardianPhone);
         return;
       }
       const blob = await worker.outputPdf('blob');
@@ -2172,14 +2222,16 @@
   });
   document.getElementById('reg-branch').addEventListener('change', syncSlotDropdowns);
   document.getElementById('reg-photo').addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const r = new FileReader();
-    r.onload = ev => { regPhotoDataUrl = ev.target.result; document.getElementById('reg-photo-preview').src = regPhotoDataUrl; };
-    r.readAsDataURL(file);
+    compressImageFile(e.target.files[0], dataUrl => {
+      regPhotoDataUrl = dataUrl;
+      document.getElementById('reg-photo-preview').src = dataUrl;
+    });
   });
   document.getElementById('form-stu-register').addEventListener('submit', async e => {
     e.preventDefault();
+    const subBtn = e.target.querySelector('button[type="submit"]');
+    if (subBtn && subBtn.disabled) return;
+    if (subBtn) subBtn.disabled = true;
     const adm = {
       tempId: 'REG-' + Date.now(),
       name: document.getElementById('reg-name').value.trim(),
@@ -2204,6 +2256,7 @@
         });
       } catch (_) {}
     }
+    if (subBtn) subBtn.disabled = false;
     document.getElementById('modal-stu-register').classList.add('hidden');
     e.target.reset();
     showToast('Registration submitted! Wait for Teacher approval.');
