@@ -376,11 +376,9 @@
         <input id="adm-name" required type="text" placeholder="e.g. Tanvir Ahmed" class="inp w-full border rounded-xl px-3 py-2">
       </div>
       <div>
-        <label class="block font-semibold muted mb-1">Class *</label>
-        <select id="adm-class" class="inp w-full border rounded-xl px-3 py-2">
-          <option value="HSC 1st Year">HSC 1st Year</option>
-          <option value="HSC 2nd Year">HSC 2nd Year</option>
-        </select>
+        <label class="block font-semibold muted mb-1">Class (Pick or Type) *</label>
+        <input id="adm-class" list="class-options" required placeholder="e.g. HSC 1st Year or SSC 27" class="inp w-full border rounded-xl px-3 py-2">
+        <datalist id="class-options"></datalist>
       </div>
       <div>
         <label class="block font-semibold muted mb-1">Branch *</label>
@@ -919,12 +917,12 @@
     fc.innerHTML = '<option value="ALL">All Classes</option>' + classes.map(c => `<option value="${c}">${c}</option>`).join('');
     if (Array.from(fc.options).some(o => o.value === curFc)) fc.value = curFc;
 
-    ['adm-class', 'ex-class'].forEach(id => {
-      const el = document.getElementById(id);
-      const cur = el.value;
-      el.innerHTML = classes.map(c => `<option value="${c}">${c}</option>`).join('');
-      if (Array.from(el.options).some(o => o.value === cur)) el.value = cur;
-    });
+    const dl = document.getElementById('class-options');
+    if (dl) dl.innerHTML = classes.map(c => `<option value="${c}">`).join('');
+    const exCls = document.getElementById('ex-class');
+    const curExCls = exCls.value;
+    exCls.innerHTML = classes.map(c => `<option value="${c}">${c}</option>`).join('');
+    if (Array.from(exCls.options).some(o => o.value === curExCls)) exCls.value = curExCls;
     const slots = (state.config && state.config.slots) || [];
     const hts = getHomeTuitions();
     const filterBranch = document.getElementById('filter-branch').value;
@@ -1060,6 +1058,7 @@
             <button data-att="A" data-id="${s.id}" class="${btnCls('A', 'bg-rose-600')}">A</button>
             ${s.branch !== 'Home Tuition' ? `<input data-fine-id="${s.id}" type="number" min="0" value="${s.manualAbsentFine || 0}" class="inp w-16 border rounded-xl px-2 py-1 text-xs text-center" placeholder="Fine">` : ''}
             <button data-att="L" data-id="${s.id}" class="${btnCls('L', 'bg-amber-500')}">L</button>
+            ${status ? `<button data-att="CLEAR" data-id="${s.id}" title="Remove attendance" class="px-2.5 py-1.5 rounded-xl text-xs font-bold surface-2 border text-slate-400 hover:text-rose-400">&times;</button>` : ''}
             ${status === 'A' ? `<a href="${waLink}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/15 text-emerald-400">WA Alert</a>` : ''}
           </div>
         </div>
@@ -1676,11 +1675,7 @@
       document.getElementById('adm-class').value = stu.classYear || 'HSC 1st Year';
       document.getElementById('adm-branch').value = stu.branch || 'GEC';
       syncSlotDropdowns();
-      const clsEl = document.getElementById('adm-class');
-      if (stu.classYear && !Array.from(clsEl.options).some(o => o.value === stu.classYear)) {
-        clsEl.add(new Option(stu.classYear, stu.classYear));
-      }
-      clsEl.value = stu.classYear || 'HSC 1st Year';
+      document.getElementById('adm-class').value = stu.classYear || 'HSC 1st Year';
       const slotEl = document.getElementById('adm-slot');
       if (stu.slot && !Array.from(slotEl.options).some(o => o.value === stu.slot)) {
         slotEl.add(new Option(stu.slot, stu.slot));
@@ -1723,11 +1718,24 @@
     const d = document.getElementById('att-date').value;
     s.attendance = s.attendance || {};
     const prevAtt = s.attendance[d];
-    s.attendance[d] = att;
     const defFine = s.branch === 'Home Tuition' ? 0 : Number(state.config.defaultAbsentFine ?? 50);
-    if (att === 'A' && prevAtt !== 'A' && defFine > 0) s.manualAbsentFine = (Number(s.manualAbsentFine) || 0) + defFine;
+    const nextAtt = (att === 'CLEAR' || prevAtt === att) ? '' : att;
+    if (!nextAtt) {
+      delete s.attendance[d];
+      if (prevAtt === 'A' && defFine > 0) {
+        s.manualAbsentFine = Math.max(0, (Number(s.manualAbsentFine) || 0) - defFine);
+      }
+      showToast('Removed attendance for ' + s.name);
+    } else {
+      s.attendance[d] = nextAtt;
+      if (nextAtt === 'A' && prevAtt !== 'A' && defFine > 0) {
+        s.manualAbsentFine = (Number(s.manualAbsentFine) || 0) + defFine;
+      } else if (prevAtt === 'A' && nextAtt !== 'A' && defFine > 0) {
+        s.manualAbsentFine = Math.max(0, (Number(s.manualAbsentFine) || 0) - defFine);
+      }
+    }
     saveState();
-    pushToSheet({ action: 'markAttendance', date: d, studentId: id, status: att });
+    pushToSheet({ action: 'markAttendance', date: d, studentId: id, status: nextAtt });
     renderAll();
   });
 
