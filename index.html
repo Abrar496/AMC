@@ -1198,7 +1198,8 @@
             ${showCq ? `<label class="muted">CQ/${exam.cqMax || '-'}</label><input data-mark-id="${s.id}" data-exam-id="${exam.id}" data-part="cq" type="number" value="${sc.cq}" class="inp w-12 border rounded-lg px-1 py-1 text-center font-bold">` : ''}
             ${showMcq ? `<label class="muted">MCQ/${exam.mcqMax || '-'}</label><input data-mark-id="${s.id}" data-exam-id="${exam.id}" data-part="mcq" type="number" value="${sc.mcq}" class="inp w-12 border rounded-lg px-1 py-1 text-center font-bold">` : ''}
             ${showPrac ? `<label class="muted">Prac/${exam.pracMax || '-'}</label><input data-mark-id="${s.id}" data-exam-id="${exam.id}" data-part="prac" type="number" value="${sc.prac}" class="inp w-12 border rounded-lg px-1 py-1 text-center font-bold">` : ''}
-            <a href="${waUrl(s.guardianWa, waMsg)}" target="_blank" rel="noopener noreferrer" class="px-2 py-1 rounded-lg bg-emerald-500/15 text-emerald-400 font-bold">WA</a>
+            <button type="button" data-save-mark="${s.id}" data-exam-id="${exam.id}" class="px-2.5 py-1 rounded-lg bg-cyan-500 text-slate-950 font-bold">Save</button>
+            <button type="button" data-wa-mark="${s.id}" data-exam-id="${exam.id}" class="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-400 font-bold">WA</button>
           </div>
         </div>
       `;
@@ -1888,6 +1889,40 @@
     document.getElementById('select-exam-marks').value = newExId;
     renderExamsTab(filteredStudents());
     showToast('Exam posted — 12h alarm armed');
+  });
+
+  document.getElementById('marks-entry-list').addEventListener('click', e => {
+    const saveSid = e.target.dataset.saveMark;
+    const waSid = e.target.dataset.waMark;
+    const sid = saveSid || waSid;
+    const eid = e.target.dataset.examId;
+    if (!sid || !eid) return;
+    const exam = state.exams.find(x => x.id === eid);
+    const s = state.students.find(x => x.id === sid);
+    if (!exam || !s) return;
+
+    const rowInputs = document.querySelectorAll(`#marks-entry-list input[data-mark-id="${sid}"][data-exam-id="${eid}"]`);
+    const sc = exam.scores[sid] || { cq: 0, mcq: 0, prac: 0 };
+    rowInputs.forEach(inp => { sc[inp.dataset.part || 'cq'] = Number(inp.value) || 0; });
+    exam.scores[sid] = sc;
+    saveState();
+    pushToSheet({ action: 'saveMark', examId: eid, studentId: sid, cq: sc.cq || 0, mcq: sc.mcq || 0, prac: sc.prac || 0 });
+    renderStudentView();
+
+    if (saveSid) {
+      showToast('Saved marks for ' + s.name);
+      return;
+    }
+
+    const tStr = String(exam.type || '');
+    let showCq = /\bCQ\b/.test(tStr) || tStr === 'Final Test' || Number(exam.cqMax) > 0;
+    const showMcq = /\bMCQ\b/.test(tStr) || tStr === 'Final Test' || Number(exam.mcqMax) > 0;
+    const showPrac = tStr === 'Final Test' || Number(exam.pracMax) > 0;
+    if (!showCq && !showMcq && !showPrac) showCq = true;
+    const total = (showCq ? (Number(sc.cq) || 0) : 0) + (showMcq ? (Number(sc.mcq) || 0) : 0) + (showPrac ? (Number(sc.prac) || 0) : 0);
+    const maxTotal = (showCq ? (Number(exam.cqMax) || 0) : 0) + (showMcq ? (Number(exam.mcqMax) || 0) : 0) + (showPrac ? (Number(exam.pracMax) || 0) : 0);
+    const msg = `Abrar Math Coaching Result (${exam.title}): ${s.name} (${s.id}) scored ${total}/${maxTotal}.`;
+    window.open(waUrl(s.guardianWa, msg), '_blank', 'noopener,noreferrer');
   });
 
   document.getElementById('marks-entry-list').addEventListener('input', e => {
