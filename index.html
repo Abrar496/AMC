@@ -576,13 +576,14 @@
       <h2 class="text-base font-bold text-white-adapt">Install Abrar Math Coaching App</h2>
       <button data-close="modal-install" class="muted text-lg font-bold">&times;</button>
     </div>
-    <p class="muted">Install on Android for 12-hour exam alarms, offline PDF printing, and WhatsApp sharing.</p>
+    <p class="muted">Download the official Android APK for 12-hour exam alarms, PDF sharing, and instant access.</p>
+    <a href="https://abrar496.github.io/AMC/AbrarMathCoaching.apk" download="AbrarMathCoaching.apk" class="block w-full text-center py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold shadow">Download Android App (.apk)</a>
     <div class="surface-2 border rounded-xl p-3 space-y-1">
-      <p><strong>Android:</strong> Tap menu (&vellip;) &rarr; <em>Add to Home screen</em>.</p>
+      <p><strong>Android:</strong> Tap <em>Download Android App</em> above, open the downloaded file, and tap <em>Install</em>.</p>
       <p><strong>iPhone:</strong> Tap Share &rarr; <em>Add to Home Screen</em>.</p>
     </div>
     <div class="flex justify-end">
-      <button data-close="modal-install" class="px-4 py-2 rounded-xl bg-cyan-500 text-slate-950 font-bold">Got It</button>
+      <button data-close="modal-install" class="surface-2 border px-4 py-2 rounded-xl font-semibold">Got It</button>
     </div>
   </div>
 </div>
@@ -911,7 +912,7 @@
   }
 
   function syncSlotDropdowns() {
-    const classes = getClasses();
+    const classes = Array.from(new Set(getClasses().concat(state.students.map(st => st.classYear).filter(Boolean))));
     const fc = document.getElementById('filter-class');
     const curFc = fc.value;
     fc.innerHTML = '<option value="ALL">All Classes</option>' + classes.map(c => `<option value="${c}">${c}</option>`).join('');
@@ -1151,6 +1152,15 @@
     document.getElementById('student-cal-grid').innerHTML = cells;
   }
 
+  function examsForStudent(s) {
+    return state.exams.filter(e => {
+      const clsOk = !e.classYear || e.classYear === 'ALL' || String(e.classYear).toLowerCase() === String(s.classYear || '').toLowerCase();
+      const brOk = !e.branch || e.branch === 'ALL' || e.branch === s.branch;
+      const slOk = !e.slot || e.slot === 'ALL' || e.slot === s.slot;
+      return clsOk && brOk && slOk;
+    });
+  }
+
   function renderStudentView() {
     const sel = document.getElementById('student-portal-select');
     const prev = sel.value;
@@ -1183,7 +1193,7 @@
       <div class="surface border rounded-2xl p-3"><p class="text-[11px] muted">Fines</p><p class="text-base font-bold text-rose-400 mt-1">${l.fine} BDT</p></div>
       <div class="surface border rounded-2xl p-3"><p class="text-[11px] muted">Total Due</p><p class="text-base font-bold ${l.due > 0 ? 'text-amber-400' : 'text-emerald-400'} mt-1">${l.due} BDT</p></div>
     `;
-    document.getElementById('student-marks-list').innerHTML = state.exams.map(e => {
+    document.getElementById('student-marks-list').innerHTML = examsForStudent(s).map(e => {
       const sc = (e.scores || {})[s.id];
       const total = sc ? (Number(sc.cq) || 0) + (Number(sc.mcq) || 0) + (Number(sc.prac) || 0) : '—';
       const maxTotal = (Number(e.cqMax) || 0) + (Number(e.mcqMax) || 0) + (Number(e.pracMax) || 0);
@@ -1267,12 +1277,13 @@
     const s = state.students.find(x => x.id === id);
     if (!s) return;
     const l = calcLedger(s);
-    const rows = state.exams.map(e => {
+    const stuExams = examsForStudent(s);
+    const rows = stuExams.length ? stuExams.map(e => {
       const sc = (e.scores || {})[s.id] || { cq: 0, mcq: 0, prac: 0 };
       const tot = (Number(sc.cq) || 0) + (Number(sc.mcq) || 0) + (Number(sc.prac) || 0);
       const max = (Number(e.cqMax) || 0) + (Number(e.mcqMax) || 0) + (Number(e.pracMax) || 0);
       return `<tr><td class="p-2 border-b">${e.title}</td><td class="p-2 border-b">${e.type}</td><td class="p-2 border-b mono">${tot} / ${max}</td></tr>`;
-    }).join('');
+    }).join('') : '<tr><td colspan="3" class="p-2 text-center">No exams recorded for this class/slot yet.</td></tr>';
     const html = `
       <div class="space-y-4 text-xs">
         ${pdfHeaderHtml("Result Marksheet", '<div id="pdf-qr-target"></div>', s.branch === 'Home Tuition')}
@@ -1293,7 +1304,7 @@
     if (!s) return;
     const l = calcLedger(s);
     const present = Object.values(s.attendance || {}).filter(v => v === 'P').length;
-    const examRows = state.exams.map(e => {
+    const examRows = examsForStudent(s).map(e => {
       const sc = (e.scores || {})[s.id] || { cq: 0, mcq: 0, prac: 0 };
       const tot = (Number(sc.cq) || 0) + (Number(sc.mcq) || 0) + (Number(sc.prac) || 0);
       const max = (Number(e.cqMax) || 0) + (Number(e.mcqMax) || 0) + (Number(e.pracMax) || 0);
