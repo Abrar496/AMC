@@ -92,8 +92,8 @@
         <label class="block font-semibold muted mb-1.5">Guardian WhatsApp Number</label>
         <input id="login-guardian-wa" type="tel" required placeholder="e.g. 01812001122" class="inp w-full border rounded-xl px-4 py-3 text-sm">
       </div>
-      <p class="text-[11px] muted">Demo: <span class="mono text-cyan-400">01812001122</span>, <span class="mono text-cyan-400">01711334455</span>, <span class="mono text-cyan-400">01815556677</span></p>
       <button type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold text-sm shadow-lg">OPEN STUDENT PORTAL &rarr;</button>
+      <button id="btn-open-stu-register" type="button" class="w-full py-2.5 rounded-xl surface-2 border text-cyan-400 font-bold text-xs">New Student? Register Here &rarr;</button>
     </form>
 
     <form id="form-teacher-login" class="hidden space-y-4 text-xs">
@@ -622,6 +622,68 @@
   </div>
 </div>
 
+<!-- MODAL: STUDENT SELF-REGISTRATION -->
+<div id="modal-stu-register" class="no-print hidden fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
+  <div class="surface border rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-5 space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-700/40 pb-3">
+      <div>
+        <h2 class="text-base font-bold text-white-adapt">New Student Registration</h2>
+        <p class="text-[11px] muted">Submit your details; your Teacher will issue your Student ID</p>
+      </div>
+      <button data-close="modal-stu-register" class="muted text-lg font-bold">&times;</button>
+    </div>
+    <form id="form-stu-register" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+      <div class="sm:col-span-2 flex items-center gap-3 surface-2 border p-3 rounded-xl">
+        <img id="reg-photo-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56'%3E%3Crect width='56' height='56' fill='%231e293b'/%3E%3Ctext x='50%25' y='54%25' text-anchor='middle' font-size='10' fill='%2394a3b8' font-family='sans-serif'%3EPhoto%3C/text%3E%3C/svg%3E" alt="Preview" class="w-14 h-14 rounded-xl object-cover border border-slate-600">
+        <div>
+          <label class="block font-semibold mb-1">Student Photo (Optional)</label>
+          <input id="reg-photo" type="file" accept="image/*" class="text-xs">
+        </div>
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block font-semibold muted mb-1">Full Name *</label>
+        <input id="reg-name" required type="text" placeholder="Your full name" class="inp w-full border rounded-xl px-3 py-2">
+      </div>
+      <div>
+        <label class="block font-semibold muted mb-1">Class *</label>
+        <input id="reg-class" list="class-options" required placeholder="e.g. HSC 1st Year / SSC 27" class="inp w-full border rounded-xl px-3 py-2">
+      </div>
+      <div>
+        <label class="block font-semibold muted mb-1">Branch *</label>
+        <select id="reg-branch" class="inp w-full border rounded-xl px-3 py-2">
+          <option value="GEC">GEC (Jahanara Mansion)</option>
+          <option value="Chawkbazar">Chawkbazar (KB Plaza)</option>
+          <option value="Home Tuition">Home Tuition</option>
+        </select>
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block font-semibold muted mb-1">Preferred Slot / Tuition *</label>
+        <select id="reg-slot" class="inp w-full border rounded-xl px-3 py-2"></select>
+      </div>
+      <div>
+        <label class="block font-semibold muted mb-1">Student WhatsApp *</label>
+        <input id="reg-stu-wa" required type="tel" placeholder="017XXXXXXXX" class="inp w-full border rounded-xl px-3 py-2">
+      </div>
+      <div>
+        <label class="block font-semibold muted mb-1">Guardian WhatsApp *</label>
+        <input id="reg-gua-wa" required type="tel" placeholder="018XXXXXXXX" class="inp w-full border rounded-xl px-3 py-2">
+      </div>
+      <div>
+        <label class="block font-semibold muted mb-1">Email</label>
+        <input id="reg-email" type="email" placeholder="Optional" class="inp w-full border rounded-xl px-3 py-2">
+      </div>
+      <div>
+        <label class="block font-semibold muted mb-1">Joining Month *</label>
+        <input id="reg-joining" required type="month" value="2026-11" class="inp w-full border rounded-xl px-3 py-2">
+      </div>
+      <div class="sm:col-span-2 pt-2 flex justify-end gap-2">
+        <button type="button" data-close="modal-stu-register" class="surface-2 border px-4 py-2 rounded-xl font-semibold">Cancel</button>
+        <button type="submit" class="px-5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold">Submit Registration</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- PRINTABLE / PDF PREVIEW MODAL -->
 <div id="modal-print" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
   <div class="surface border rounded-2xl max-w-3xl w-full max-h-[92vh] overflow-y-auto p-5 space-y-4">
@@ -949,6 +1011,16 @@
       ? hts.map(h => `<option value="${h.name}">${h.name} (${h.days} &bull; ${h.time} &bull; ${h.location})</option>`).join('')
       : slots.map(sl => `<option value="${sl.name}">${sl.name} (${sl.days} &bull; ${sl.time})</option>`).join('');
     if (Array.from(admSlot.options).some(o => o.value === curAdm)) admSlot.value = curAdm;
+
+    const regBranchEl = document.getElementById('reg-branch');
+    const regSlotEl = document.getElementById('reg-slot');
+    if (regBranchEl && regSlotEl) {
+      const curReg = regSlotEl.value;
+      regSlotEl.innerHTML = regBranchEl.value === 'Home Tuition'
+        ? hts.map(h => `<option value="${h.name}">${h.name} (${h.days} &bull; ${h.time} &bull; ${h.location})</option>`).join('')
+        : slots.map(sl => `<option value="${sl.name}">${sl.name} (${sl.days} &bull; ${sl.time})</option>`).join('');
+      if (Array.from(regSlotEl.options).some(o => o.value === curReg)) regSlotEl.value = curReg;
+    }
   }
 
   function switchTeacherTab(tab) {
@@ -1106,9 +1178,11 @@
     const exam = state.exams.find(e => e.id === sel.value) || state.exams[0];
     const container = document.getElementById('marks-entry-list');
     if (!exam) { container.innerHTML = '<p class="text-xs muted">No exams created yet.</p>'; return; }
-    const showCq = (exam.type || '').includes('CQ') || exam.type === 'Final Test';
-    const showMcq = (exam.type || '').includes('MCQ') || exam.type === 'Final Test';
-    const showPrac = exam.type === 'Final Test';
+    const tStr = String(exam.type || '');
+    let showCq = /\bCQ\b/.test(tStr) || tStr === 'Final Test' || Number(exam.cqMax) > 0;
+    const showMcq = /\bMCQ\b/.test(tStr) || tStr === 'Final Test' || Number(exam.mcqMax) > 0;
+    const showPrac = tStr === 'Final Test' || Number(exam.pracMax) > 0;
+    if (!showCq && !showMcq && !showPrac) showCq = true;
     container.innerHTML = list.map(s => {
       const sc = (exam.scores || {})[s.id] || { cq: '', mcq: '', prac: '' };
       const total = (showCq ? (Number(sc.cq) || 0) : 0) + (showMcq ? (Number(sc.mcq) || 0) : 0) + (showPrac ? (Number(sc.prac) || 0) : 0);
@@ -1438,8 +1512,8 @@
   function syncExamFormUI() {
     const exType = document.getElementById('ex-type').value;
     const exClass = document.getElementById('ex-class').value;
-    const hasCq = exType.includes('CQ') || exType === 'Final Test';
-    const hasMcq = exType.includes('MCQ') || exType === 'Final Test';
+    const hasCq = /\bCQ\b/.test(exType) || exType === 'Final Test';
+    const hasMcq = /\bMCQ\b/.test(exType) || exType === 'Final Test';
     const hasPrac = exType === 'Final Test';
     document.getElementById('wrap-cq-max').classList.toggle('hidden', !hasCq);
     document.getElementById('wrap-mcq-max').classList.toggle('hidden', !hasMcq);
@@ -1951,7 +2025,7 @@
   });
 
   window.handleAndroidBack = function() {
-    const modals = ['modal-print', 'modal-admission', 'modal-pending', 'modal-qr', 'modal-charge', 'modal-pay', 'modal-settings', 'modal-install', 'modal-change-pass', 'modal-delete-stu'];
+    const modals = ['modal-print', 'modal-stu-register', 'modal-admission', 'modal-pending', 'modal-qr', 'modal-charge', 'modal-pay', 'modal-settings', 'modal-install', 'modal-change-pass', 'modal-delete-stu'];
     for (let i = 0; i < modals.length; i++) {
       const m = document.getElementById(modals[i]);
       if (m && !m.classList.contains('hidden')) { m.classList.add('hidden'); return 'handled'; }
@@ -1962,6 +2036,51 @@
     }
     return 'home';
   };
+
+  let regPhotoDataUrl = '';
+  document.getElementById('btn-open-stu-register').addEventListener('click', () => {
+    regPhotoDataUrl = '';
+    syncSlotDropdowns();
+    document.getElementById('modal-stu-register').classList.remove('hidden');
+  });
+  document.getElementById('reg-branch').addEventListener('change', syncSlotDropdowns);
+  document.getElementById('reg-photo').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = ev => { regPhotoDataUrl = ev.target.result; document.getElementById('reg-photo-preview').src = regPhotoDataUrl; };
+    r.readAsDataURL(file);
+  });
+  document.getElementById('form-stu-register').addEventListener('submit', async e => {
+    e.preventDefault();
+    const adm = {
+      tempId: 'REG-' + Date.now(),
+      name: document.getElementById('reg-name').value.trim(),
+      classYear: document.getElementById('reg-class').value.trim(),
+      branch: document.getElementById('reg-branch').value,
+      slot: document.getElementById('reg-slot').value,
+      studentWa: document.getElementById('reg-stu-wa').value.trim(),
+      guardianWa: document.getElementById('reg-gua-wa').value.trim(),
+      email: document.getElementById('reg-email').value.trim(),
+      joiningMonth: document.getElementById('reg-joining').value,
+      photo: regPhotoDataUrl
+    };
+    state.pendingAdmissions.push(adm);
+    saveState();
+    const url = (state.config && state.config.scriptUrl) || '';
+    if (url) {
+      try {
+        await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'submitPendingAdmission', admission: adm })
+        });
+      } catch (_) {}
+    }
+    document.getElementById('modal-stu-register').classList.add('hidden');
+    e.target.reset();
+    showToast('Registration submitted! Wait for Teacher approval.');
+  });
 
   syncExamFormUI();
   renderAll();
