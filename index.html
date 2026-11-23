@@ -286,20 +286,23 @@
 
   <!-- Fixed Bottom Navigation Bar (BatchFee Style with Floating + Button) -->
   <nav id="bottom-nav" class="no-print fixed bottom-0 inset-x-0 z-30 surface border-t">
-    <div class="max-w-lg mx-auto px-2 py-1.5 grid grid-cols-5 items-center text-center">
-      <button data-tab="home" class="t-tab flex flex-col items-center py-1 text-cyan-400 font-bold text-[11px]">
+    <div class="max-w-lg mx-auto px-1 py-1.5 grid grid-cols-6 items-center text-center">
+      <button data-tab="home" class="t-tab flex flex-col items-center py-1 text-cyan-400 font-bold text-[10px]">
         <span>&#8962;</span><span>Home</span>
       </button>
-      <button data-tab="students" class="t-tab flex flex-col items-center py-1 muted font-semibold text-[11px]">
+      <button data-tab="students" class="t-tab flex flex-col items-center py-1 muted font-semibold text-[10px]">
         <span>&#128101;</span><span>Students</span>
       </button>
+      <button data-tab="attendance" class="t-tab flex flex-col items-center py-1 muted font-semibold text-[10px]">
+        <span>&#9745;</span><span>Attend</span>
+      </button>
       <div class="flex justify-center -mt-6">
-        <button id="btn-open-add-student" title="New Admission" class="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-600 text-slate-950 font-extrabold text-2xl shadow-lg flex items-center justify-center">+</button>
+        <button id="btn-open-add-student" title="New Admission" class="w-11 h-11 rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-600 text-slate-950 font-extrabold text-2xl shadow-lg flex items-center justify-center">+</button>
       </div>
-      <button data-tab="fees" class="t-tab flex flex-col items-center py-1 muted font-semibold text-[11px]">
+      <button data-tab="fees" class="t-tab flex flex-col items-center py-1 muted font-semibold text-[10px]">
         <span>&#2547;</span><span>Fees</span>
       </button>
-      <button data-tab="exams" class="t-tab flex flex-col items-center py-1 muted font-semibold text-[11px]">
+      <button data-tab="exams" class="t-tab flex flex-col items-center py-1 muted font-semibold text-[10px]">
         <span>&#128221;</span><span>Exams</span>
       </button>
     </div>
@@ -546,6 +549,14 @@
         </form>
       </div>
       <div class="space-y-2 pt-3 border-t border-slate-700/40">
+        <h3 class="font-bold">Classes (HSC / SSC 27 / Custom)</h3>
+        <div id="custom-classes-list" class="flex flex-wrap gap-1.5"></div>
+        <form id="form-add-class" class="flex gap-2 pt-1">
+          <input id="new-class-name" required type="text" placeholder="e.g. SSC 27 or Class 10" class="inp flex-1 border rounded-xl px-2.5 py-1.5">
+          <button type="submit" class="px-3 py-1.5 rounded-xl bg-cyan-500 text-slate-950 font-bold">+ Add Class</button>
+        </form>
+      </div>
+      <div class="space-y-2 pt-3 border-t border-slate-700/40">
         <h3 class="font-bold">Home Tuitions (Time &amp; Location)</h3>
         <div id="home-tuitions-list" class="space-y-1.5"></div>
         <form id="form-add-ht" class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
@@ -637,6 +648,7 @@
       scriptUrl: 'https://script.google.com/macros/s/AKfycbxXZO9t4kxhhxybQP42hFE4IL9zGWckqmqwBzMq3_2FaEQAAtBitQkM5ivyJWt0DKr6gA/exec',
       defaultAbsentFine: 50,
       teacherPassword: 'abrar2026',
+      classes: ['HSC 1st Year', 'HSC 2nd Year', 'SSC 27', 'SSC 26', 'Class 10', 'Class 9'],
       slots: [
         { name: 'Slot A', days: 'Sat, Mon, Wed', time: '3:30 PM' },
         { name: 'Slot B', days: 'Sun, Tue, Thu', time: '3:30 PM' },
@@ -776,6 +788,38 @@
     } catch (e) {}
   }
 
+  function applySheetPayload(data) {
+    if (Array.isArray(data.pendingAdmissions)) state.pendingAdmissions = data.pendingAdmissions;
+    if (Array.isArray(data.students) && data.students.length) {
+      state.students = data.students.map(st => {
+        const obj = Object.assign({ manualCharges: [], attendance: {}, photo: st.photoUrl || st.photo || '' }, st);
+        if (Array.isArray(data.attendance)) {
+          data.attendance.filter(a => String(a.studentId) === String(obj.id)).forEach(a => {
+            const dtStr = String(a.date || '').slice(0, 10);
+            if (dtStr) obj.attendance[dtStr] = a.status;
+          });
+        }
+        if (Array.isArray(data.manualCharges)) {
+          obj.manualCharges = data.manualCharges
+            .filter(c => String(c.studentId) === String(obj.id))
+            .map(c => ({ title: c.title, amount: Number(c.amount) || 0 }));
+        }
+        return obj;
+      });
+    }
+    if (Array.isArray(data.exams) && data.exams.length) {
+      state.exams = data.exams.map(ex => {
+        const scMap = {};
+        if (Array.isArray(data.scores)) {
+          data.scores.filter(sc => String(sc.examId) === String(ex.examId || ex.id)).forEach(sc => {
+            scMap[sc.studentId] = { cq: Number(sc.cq) || 0, mcq: Number(sc.mcq) || 0, prac: Number(sc.prac) || 0 };
+          });
+        }
+        return Object.assign({ id: ex.examId || ex.id, scores: scMap }, ex);
+      });
+    }
+  }
+
   async function syncTeacherFromSheet() {
     const url = (state.config && state.config.scriptUrl) || '';
     if (!url) return;
@@ -783,10 +827,7 @@
       const res = await fetch(url + '?action=teacherSync&mobile=01616397272&password=' + encodeURIComponent((state.config && state.config.teacherPassword) || 'abrar2026'));
       const data = await res.json();
       if (data && data.ok) {
-        if (Array.isArray(data.pendingAdmissions)) state.pendingAdmissions = data.pendingAdmissions;
-        if (Array.isArray(data.students) && data.students.length) {
-          state.students = data.students.map(st => Object.assign({ manualCharges: [], attendance: {}, photo: st.photoUrl || st.photo || '' }, st));
-        }
+        applySheetPayload(data);
         saveState();
         renderAll();
         if (!document.getElementById('modal-pending').classList.contains('hidden')) renderPendingModal();
@@ -830,6 +871,12 @@
     return { isCycle, cycleTarget, presentCount, netFee, absentCount, fine, manualTotal, prevDue, paid, totalBill, due };
   }
 
+  function getClasses() {
+    return (state.config && state.config.classes && state.config.classes.length)
+      ? state.config.classes
+      : ['HSC 1st Year', 'HSC 2nd Year', 'SSC 27', 'SSC 26', 'Class 10', 'Class 9'];
+  }
+
   function getHomeTuitions() {
     return (state.config && state.config.homeTuitions) || [
       { name: 'Tuition 1', days: 'Sun, Tue, Thu', time: '7:00 PM', location: 'Nasirabad' },
@@ -866,6 +913,18 @@
   }
 
   function syncSlotDropdowns() {
+    const classes = getClasses();
+    const fc = document.getElementById('filter-class');
+    const curFc = fc.value;
+    fc.innerHTML = '<option value="ALL">All Classes</option>' + classes.map(c => `<option value="${c}">${c}</option>`).join('');
+    if (Array.from(fc.options).some(o => o.value === curFc)) fc.value = curFc;
+
+    ['adm-class', 'ex-class'].forEach(id => {
+      const el = document.getElementById(id);
+      const cur = el.value;
+      el.innerHTML = classes.map(c => `<option value="${c}">${c}</option>`).join('');
+      if (Array.from(el.options).some(o => o.value === cur)) el.value = cur;
+    });
     const slots = (state.config && state.config.slots) || [];
     const hts = getHomeTuitions();
     const filterBranch = document.getElementById('filter-branch').value;
@@ -901,8 +960,8 @@
     document.querySelectorAll('#bottom-nav .t-tab').forEach(b => {
       const isAct = b.dataset.tab === tab;
       b.className = isAct
-        ? 't-tab flex flex-col items-center py-1 text-cyan-400 font-bold text-[11px]'
-        : 't-tab flex flex-col items-center py-1 muted font-semibold text-[11px]';
+        ? 't-tab flex flex-col items-center py-1 text-cyan-400 font-bold text-[10px]'
+        : 't-tab flex flex-col items-center py-1 muted font-semibold text-[10px]';
     });
   }
 
@@ -1326,6 +1385,12 @@
   function renderSettingsModal() {
     document.getElementById('cfg-absent-fine').value = state.config.defaultAbsentFine ?? 50;
     document.getElementById('cfg-teacher-pass').value = (state.config && state.config.teacherPassword) || 'abrar2026';
+    document.getElementById('custom-classes-list').innerHTML = getClasses().map((c, idx) => `
+      <span class="surface-2 border rounded-lg px-2.5 py-1 text-xs font-semibold flex items-center gap-1.5">
+        ${c}
+        ${idx >= 2 ? `<button data-del-class="${idx}" class="text-rose-400 font-bold">&times;</button>` : ''}
+      </span>
+    `).join('');
     document.getElementById('custom-slots-list').innerHTML = (state.config.slots || []).map((sl, idx) => `
       <div class="surface-2 border rounded-xl p-2.5 space-y-1.5">
         <div class="flex items-center justify-between">
@@ -1426,7 +1491,7 @@
         const res = await fetch(url + '?action=studentLogin&guardianWa=' + encodeURIComponent(gPhone));
         const data = await res.json();
         if (data && data.ok && Array.isArray(data.students) && data.students.length) {
-          state.students = data.students.map(st => Object.assign({ manualCharges: [], attendance: {}, photo: st.photoUrl || st.photo || '' }, st));
+          applySheetPayload(data);
           saveState();
           match = state.students[0];
         }
@@ -1457,6 +1522,7 @@
     document.getElementById('btn-logout').classList.remove('hidden');
     switchTeacherTab('home');
     renderAll();
+    syncTeacherFromSheet();
   });
 
   document.getElementById('btn-logout').addEventListener('click', () => {
@@ -1610,7 +1676,16 @@
       document.getElementById('adm-class').value = stu.classYear || 'HSC 1st Year';
       document.getElementById('adm-branch').value = stu.branch || 'GEC';
       syncSlotDropdowns();
-      document.getElementById('adm-slot').value = stu.slot || 'Slot A';
+      const clsEl = document.getElementById('adm-class');
+      if (stu.classYear && !Array.from(clsEl.options).some(o => o.value === stu.classYear)) {
+        clsEl.add(new Option(stu.classYear, stu.classYear));
+      }
+      clsEl.value = stu.classYear || 'HSC 1st Year';
+      const slotEl = document.getElementById('adm-slot');
+      if (stu.slot && !Array.from(slotEl.options).some(o => o.value === stu.slot)) {
+        slotEl.add(new Option(stu.slot, stu.slot));
+      }
+      slotEl.value = stu.slot || (slotEl.options[0] ? slotEl.options[0].value : '');
       document.getElementById('adm-joining').value = String(stu.joiningMonth || '2026-11').slice(0, 7);
       document.getElementById('adm-stu-wa').value = stu.studentWa || '';
       document.getElementById('adm-gua-wa').value = stu.guardianWa || '';
@@ -1695,7 +1770,8 @@
     if (!s) return;
     const amt = Number(document.getElementById('pay-amount').value) || 0;
     s.paidCurrent = (Number(s.paidCurrent) || 0) + amt;
-    saveState(); document.getElementById('modal-pay').classList.add('hidden');
+    saveState();
+    pushToSheet({ action: 'collectPayment', studentId: id, paidCurrent: s.paidCurrent, manualAbsentFine: s.manualAbsentFine || 0 }); document.getElementById('modal-pay').classList.add('hidden');
     renderAll(); showFeeReceiptPdf(id);
   });
 
@@ -1731,7 +1807,7 @@
     const prev = exam.scores[sid] || { cq: 0, mcq: 0, prac: 0 };
     prev[part] = Number(e.target.value) || 0;
     exam.scores[sid] = prev;
-    saveState(); renderStudentView();
+    saveState(); pushToSheet({ action: 'saveMark', examId: eid, studentId: sid, cq: prev.cq || 0, mcq: prev.mcq || 0, prac: prev.prac || 0 }); renderStudentView();
   });
 
   document.getElementById('btn-stu-admission-pdf').addEventListener('click', () => showAdmissionPdf(document.getElementById('student-portal-select').value));
@@ -1799,6 +1875,23 @@
   });
 
   document.getElementById('adm-branch').addEventListener('change', syncSlotDropdowns);
+
+  document.getElementById('form-add-class').addEventListener('submit', e => {
+    e.preventDefault();
+    const name = document.getElementById('new-class-name').value.trim();
+    if (!name) return;
+    state.config.classes = getClasses().slice();
+    if (!state.config.classes.includes(name)) state.config.classes.push(name);
+    saveState(); e.target.reset(); renderSettingsModal(); renderAll(); showToast('Added class: ' + name);
+  });
+
+  document.getElementById('custom-classes-list').addEventListener('click', e => {
+    const idx = e.target.dataset.delClass;
+    if (idx === undefined) return;
+    state.config.classes = getClasses().slice();
+    state.config.classes.splice(Number(idx), 1);
+    saveState(); renderSettingsModal(); renderAll();
+  });
 
   document.getElementById('form-add-ht').addEventListener('submit', e => {
     e.preventDefault();
