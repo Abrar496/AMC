@@ -2073,12 +2073,40 @@
   document.getElementById('btn-stu-marksheet-pdf').addEventListener('click', () => showResultMarksheetPdf(document.getElementById('student-portal-select').value));
 
   document.getElementById('btn-share-pdf-wa').addEventListener('click', async () => {
-    const el = document.getElementById('print-sheet');
+    const srcEl = document.getElementById('print-sheet');
     const safeName = activePdfTitle.replace(/[^a-zA-Z0-9_-]+/g, '_');
     if (typeof html2pdf === 'undefined') { showToast('PDF generator loading...'); return; }
+
+    // Clone into a clean top-of-document wrapper so background scrollY never clips or blanks the PDF
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'position:absolute;left:0;top:0;width:720px;background:#ffffff;color:#0f172a;padding:20px;z-index:-1;';
+    const clone = srcEl.cloneNode(true);
+    clone.style.cssText = 'background:#ffffff;color:#0f172a;border:none;padding:0;margin:0;width:100%;';
+    // Convert any QR <canvas> in srcEl to <img> inside clone so it never renders blank
+    const srcCanvases = srcEl.querySelectorAll('canvas');
+    const cloneCanvases = clone.querySelectorAll('canvas');
+    srcCanvases.forEach((cv, idx) => {
+      if (cloneCanvases[idx]) {
+        const img = document.createElement('img');
+        img.src = cv.toDataURL('image/png');
+        img.style.width = (cv.width || 72) + 'px';
+        img.style.height = (cv.height || 72) + 'px';
+        cloneCanvases[idx].replaceWith(img);
+      }
+    });
+    wrapper.appendChild(clone);
+    document.body.appendChild(wrapper);
+
     try {
       showToast('Generating PDF...');
-      const worker = html2pdf().set({ margin: 8, filename: safeName + '.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(el);
+      const worker = html2pdf().set({
+        margin: 10,
+        filename: safeName + '.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0, windowWidth: 760, backgroundColor: '#ffffff' },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      }).from(wrapper);
+
       if (typeof CoachingBridge !== 'undefined' && CoachingBridge.sharePdfBase64) {
         const dataUri = await worker.outputPdf('datauristring');
         CoachingBridge.sharePdfBase64(dataUri, safeName, activePdfGuardianPhone);
@@ -2086,9 +2114,17 @@
       }
       const blob = await worker.outputPdf('blob');
       const file = new File([blob], safeName + '.pdf', { type: 'application/pdf' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: activePdfTitle }); }
-      else { await worker.save(); showToast('Downloaded ' + safeName + '.pdf'); }
-    } catch (e) { showToast('PDF share cancelled'); }
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: activePdfTitle });
+      } else {
+        await worker.save();
+        showToast('Downloaded ' + safeName + '.pdf');
+      }
+    } catch (e) {
+      showToast('PDF share cancelled');
+    } finally {
+      if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
+    }
   });
 
   document.getElementById('btn-do-print').addEventListener('click', () => {
