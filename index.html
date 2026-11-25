@@ -176,6 +176,30 @@
       </div>
       <button data-jump-tab="exams" class="px-4 py-2 rounded-xl surface-2 border text-xs font-bold text-cyan-400">Open Exams &rarr;</button>
     </div>
+
+    <!-- Coaching Notice & Alarm Card -->
+    <div class="surface border rounded-2xl p-4 space-y-3">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-amber-400">Coaching Notices &amp; Alarms</p>
+          <p class="text-xs muted">Post class notices with an exact-time alarm for students</p>
+        </div>
+      </div>
+      <form id="form-post-notice" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+        <input id="ntc-title" required type="text" placeholder="Notice Title (e.g. Extra Class Tomorrow)" class="inp border rounded-xl px-3 py-2">
+        <input id="ntc-datetime" required type="datetime-local" class="inp border rounded-xl px-3 py-2">
+        <input id="ntc-msg" type="text" placeholder="Notice details / room / timing..." class="inp sm:col-span-2 border rounded-xl px-3 py-2">
+        <input id="ntc-video" type="url" placeholder="Video / Lecture Link (YouTube, Drive, FB — optional)" class="inp sm:col-span-2 border rounded-xl px-3 py-2">
+        <select id="ntc-branch" class="inp border rounded-xl px-3 py-2">
+          <option value="ALL">All Branches</option>
+          <option value="GEC">GEC</option>
+          <option value="Chawkbazar">Chawkbazar</option>
+          <option value="Home Tuition">Home Tuition</option>
+        </select>
+        <button type="submit" class="py-2 rounded-xl bg-amber-500 text-slate-950 font-bold">Post Notice &amp; Set Alarm</button>
+      </form>
+      <div id="notices-list" class="space-y-1.5"></div>
+    </div>
   </section>
 
   <!-- Global Filter Bar (Shown on Students, Attendance, Fees, Exams) -->
@@ -216,13 +240,16 @@
 
   <!-- TAB: FEES & MANUAL CHARGES -->
   <section id="tab-fees" class="t-panel hidden space-y-3">
-    <div class="surface border rounded-2xl p-3.5 flex items-center justify-between gap-2">
+    <div class="surface border rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-2">
       <p class="text-xs font-bold text-white-adapt">Fee Collection &amp; Manual Charges</p>
-      <select id="fee-filter-status" class="inp text-xs border rounded-xl px-3 py-1.5">
+      <div class="flex items-center gap-2">
+        <button id="btn-open-batch-charge" type="button" class="px-3 py-1.5 rounded-xl bg-cyan-500 text-slate-950 text-xs font-bold">+ Batch Charge</button>
+        <select id="fee-filter-status" class="inp text-xs border rounded-xl px-3 py-1.5">
         <option value="ALL">All</option>
         <option value="DUE">Due Only</option>
         <option value="PAID">Paid Only</option>
       </select>
+      </div>
     </div>
     <div id="fees-list" class="space-y-2.5"></div>
   </section>
@@ -243,7 +270,7 @@
             <option value="Class Test (CQ & MCQ)">Class Test (CQ &amp; MCQ)</option>
             <option value="Final Test">Final Test (CQ + MCQ + Practical)</option>
           </select>
-          <input id="ex-title" type="text" placeholder="Auto: Class Test 1" class="inp text-xs border rounded-xl px-3 py-2 font-medium">
+          <input id="ex-title" type="text" placeholder="Exam / Topic Name (editable)" class="inp text-xs border rounded-xl px-3 py-2 font-medium">
           <input id="ex-subject" type="text" placeholder="Subject (e.g. Higher Math 1st Paper)" value="Higher Math 1st Paper" class="inp text-xs border rounded-xl px-3 py-2">
           <input id="ex-datetime" type="datetime-local" class="inp text-xs border rounded-xl px-3 py-2">
           <select id="ex-branch" class="inp text-xs border rounded-xl px-3 py-2">
@@ -267,7 +294,11 @@
               <input id="ex-prac-max" type="number" min="0" placeholder="Prac" class="inp w-full text-xs border rounded-xl px-2.5 py-2">
             </div>
           </div>
-          <input id="ex-syllabus" type="text" placeholder="Syllabus / Notice note" class="inp sm:col-span-2 text-xs border rounded-xl px-3 py-2">
+          <input id="ex-syllabus" type="text" placeholder="Topic / Syllabus note" class="inp sm:col-span-2 text-xs border rounded-xl px-3 py-2">
+          <label class="sm:col-span-2 flex items-center gap-2 text-xs muted cursor-pointer select-none">
+            <input id="ex-send-alarm" type="checkbox" checked class="rounded accent-cyan-500">
+            <span>Publish 12h Exam Notice &amp; Alarm to Students (uncheck for marks-only / tuition test)</span>
+          </label>
         </div>
         <div class="flex gap-2">
           <button id="btn-post-exam" class="flex-1 text-xs font-bold bg-gradient-to-r from-blue-600 to-cyan-500 text-white py-2.5 rounded-xl shadow">Publish Exam &amp; Set 12h Alarm</button>
@@ -276,9 +307,12 @@
       </div>
 
       <div class="surface border rounded-2xl p-4 space-y-3">
-        <div class="flex items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center justify-between gap-2">
           <h3 class="text-sm font-bold text-white-adapt">Class Test &amp; Exam Marks Entry</h3>
-          <select id="select-exam-marks" class="inp text-xs border rounded-xl px-2.5 py-1.5 max-w-[180px]"></select>
+          <div class="flex items-center gap-1.5">
+            <select id="select-exam-marks" class="inp text-xs border rounded-xl px-2.5 py-1.5 max-w-[165px]"></select>
+            <button id="btn-save-batch-marks" type="button" class="px-3 py-1.5 rounded-xl bg-cyan-500 text-slate-950 text-xs font-bold whitespace-nowrap">Save All Marks</button>
+          </div>
         </div>
         <div id="marks-entry-list" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
       </div>
@@ -337,6 +371,14 @@
       <span class="mono text-[10px] bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full">ARMED</span>
     </div>
     <div id="student-alarms-list" class="space-y-2"></div>
+  </section>
+
+  <section class="surface border border-amber-500/30 rounded-2xl p-4 space-y-2">
+    <div class="flex items-center justify-between">
+      <h2 class="text-sm font-bold text-amber-400">Coaching Notices &amp; Alarms</h2>
+      <span class="mono text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">ALERTS</span>
+    </div>
+    <div id="student-notices-list" class="space-y-2"></div>
   </section>
 
   <section id="student-summary-cards" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5"></section>
@@ -497,17 +539,37 @@
 <div id="modal-charge" class="no-print hidden fixed inset-0 z-40 bg-black/70 flex items-center justify-center p-4">
   <div class="surface border rounded-2xl max-w-sm w-full p-5 space-y-4">
     <div class="flex items-center justify-between border-b border-slate-700/40 pb-2">
-      <h2 class="text-base font-bold text-white-adapt">Add Manual Charge</h2>
+      <h2 id="chg-modal-title" class="text-base font-bold text-white-adapt">Add Manual Charge</h2>
       <button data-close="modal-charge" class="muted text-lg font-bold">&times;</button>
     </div>
     <form id="form-charge" class="space-y-3 text-xs">
       <input type="hidden" id="chg-stu-id">
+      <input type="hidden" id="chg-edit-idx">
       <p id="chg-stu-label" class="font-semibold text-cyan-400"></p>
       <input id="chg-title" required type="text" placeholder="e.g. Ch. 1B Printed Note" class="inp w-full border rounded-xl px-3 py-2">
       <input id="chg-amount" required type="number" value="100" class="inp w-full border rounded-xl px-3 py-2">
       <div class="flex justify-end gap-2">
         <button type="button" data-close="modal-charge" class="surface-2 border px-3 py-2 rounded-xl font-semibold">Cancel</button>
         <button type="submit" class="px-4 py-2 rounded-xl bg-cyan-500 text-slate-950 font-bold">Add Charge</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: BATCH MANUAL CHARGE -->
+<div id="modal-batch-charge" class="no-print hidden fixed inset-0 z-40 bg-black/70 flex items-center justify-center p-4">
+  <div class="surface border rounded-2xl max-w-sm w-full p-5 space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-700/40 pb-2">
+      <h2 class="text-base font-bold text-white-adapt">Add Batch Charge</h2>
+      <button data-close="modal-batch-charge" class="muted text-lg font-bold">&times;</button>
+    </div>
+    <form id="form-batch-charge" class="space-y-3 text-xs">
+      <p id="bchg-target-label" class="font-semibold text-cyan-400"></p>
+      <input id="bchg-title" required type="text" placeholder="e.g. 6B Print / Model Test Sheet" class="inp w-full border rounded-xl px-3 py-2">
+      <input id="bchg-amount" required type="number" min="1" value="30" class="inp w-full border rounded-xl px-3 py-2 font-bold">
+      <div class="flex justify-end gap-2">
+        <button type="button" data-close="modal-batch-charge" class="surface-2 border px-3 py-2 rounded-xl font-semibold">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-xl bg-cyan-500 text-slate-950 font-bold">Apply to All</button>
       </div>
     </form>
   </div>
@@ -756,6 +818,7 @@
     },
     pendingAdmissions: [],
     students: [],
+    notices: [],
     exams: [],
     outbox: [],
     localAuth: null
@@ -953,7 +1016,7 @@
         if (Array.isArray(data.manualCharges)) {
           obj.manualCharges = data.manualCharges
             .filter(c => String(c.studentId) === String(obj.id))
-            .map(c => ({ title: c.title, amount: Number(c.amount) || 0 }));
+            .map(c => ({ chargeId: c.chargeId || '', title: c.title, amount: Number(c.amount) || 0 }));
         }
         return obj;
       });
@@ -1149,6 +1212,7 @@
     renderStudentsTab(list);
     renderAttendanceTab(list, today);
     renderFeesTab(list);
+    renderNoticesList();
     renderExamsTab(list);
     renderStudentView();
   }
@@ -1250,6 +1314,7 @@
               <span class="text-sm font-bold text-white-adapt">${esc(s.name)}</span>
             </div>
             <p class="text-xs muted">Prev: <strong>${l.prevDue}</strong> + ${l.isCycle ? `Cycle (${l.presentCount}/${l.cycleTarget})` : 'Fee'}: <strong>${l.netFee}</strong> + Fine: <strong>${l.fine}</strong> + Manual: <strong>${l.manualTotal}</strong> &minus; Paid: <strong>${l.paid}</strong></p>
+            ${(s.manualCharges && s.manualCharges.length) ? `<div class="flex flex-wrap gap-1.5 pt-1">${s.manualCharges.map((c, idx) => `<span class="surface-2 border rounded-lg px-2 py-0.5 text-[11px] flex items-center gap-1.5"><span>${esc(c.title)}: <strong>${c.amount}</strong></span><button type="button" data-edit-chg="${idx}" data-id="${esc(s.id)}" class="text-cyan-400 font-bold">Edit</button><button type="button" data-del-chg="${idx}" data-id="${esc(s.id)}" class="text-rose-400 font-bold">&times;</button></span>`).join('')}</div>` : ''}
           </div>
           <div class="flex flex-wrap items-center gap-1.5">
             <span class="mono text-sm font-bold ${l.due > 0 ? 'text-rose-400' : 'text-emerald-400'} mr-1">Due: ${l.due} BDT</span>
@@ -1355,6 +1420,24 @@
     });
   }
 
+  function renderNoticesList() {
+    const box = document.getElementById('notices-list');
+    if (!box) return;
+    const list = state.notices || [];
+    box.innerHTML = list.map(n => `
+      <div class="surface-2 border rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div>
+          <p class="font-bold text-white-adapt">${esc(n.title)} <span class="text-amber-400 font-normal">&bull; ${esc(n.branch || 'ALL')}</span></p>
+          <p class="muted">${esc(n.message || '')} <span class="mono text-[11px] text-cyan-400">${esc(String(n.dateTime || '').replace('T', ' '))}</span></p>
+        </div>
+        <div class="flex items-center gap-1.5">
+          ${n.videoUrl ? `<a href="${esc(n.videoUrl)}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1 rounded-lg bg-cyan-500/15 text-cyan-400 font-bold">Watch Video</a>` : ''}
+          <button type="button" data-del-notice="${esc(n.id)}" class="px-2 py-1 rounded-lg bg-rose-500/15 text-rose-400 font-bold">Delete</button>
+        </div>
+      </div>
+    `).join('') || '<p class="text-xs muted">No active notices.</p>';
+  }
+
   function renderStudentView() {
     const sel = document.getElementById('student-portal-select');
     const prev = sel.value;
@@ -1380,6 +1463,25 @@
       `;
     }).join('') || '<p class="text-xs muted">No upcoming exams.</p>';
 
+    const stuNotices = (state.notices || []).filter(n => !n.branch || n.branch === 'ALL' || n.branch === s.branch);
+    const snBox = document.getElementById('student-notices-list');
+    if (snBox) {
+      snBox.innerHTML = stuNotices.map(n => `
+        <div class="surface-2 border rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div>
+            <p class="font-bold text-white-adapt">${esc(n.title)}</p>
+            <p class="muted">${esc(n.message || '')}</p>
+          </div>
+          <div class="flex flex-col items-end gap-1">
+            <p class="mono font-semibold text-amber-400">Alarm: ${esc(String(n.dateTime || '').replace('T', ' '))}</p>
+            ${n.videoUrl ? `<a href="${esc(n.videoUrl)}" target="_blank" rel="noopener noreferrer" class="px-3 py-1 rounded-lg bg-cyan-500 text-slate-950 font-bold">Watch Video &rarr;</a>` : ''}
+          </div>
+        </div>
+      `).join('') || '<p class="text-xs muted">No coaching notices right now.</p>';
+    }
+    if (typeof CoachingBridge !== 'undefined' && CoachingBridge.scheduleNoticeAlarm) {
+      stuNotices.forEach(n => { try { CoachingBridge.scheduleNoticeAlarm(n.id, n.title, n.dateTime); } catch (_) {} });
+    }
     renderStudentCalendar(s);
     document.getElementById('student-summary-cards').innerHTML = `
       <div class="surface border rounded-2xl p-3"><p class="text-[11px] muted">Student ID</p><p class="mono text-xs font-bold text-cyan-400 mt-1">${esc(s.id)}</p></div>
@@ -1995,12 +2097,44 @@
   });
 
   document.getElementById('fees-list').addEventListener('click', e => {
+    const editIdx = e.target.dataset.editChg;
+    if (editIdx !== undefined) {
+      const sid = e.target.dataset.id;
+      const s = state.students.find(x => x.id === sid);
+      const chg = s && s.manualCharges && s.manualCharges[Number(editIdx)];
+      if (!chg) return;
+      document.getElementById('chg-stu-id').value = sid;
+      document.getElementById('chg-edit-idx').value = editIdx;
+      document.getElementById('chg-modal-title').textContent = 'Edit Manual Charge';
+      document.getElementById('chg-stu-label').textContent = s.name + ' (' + s.id + ')';
+      document.getElementById('chg-title').value = chg.title || '';
+      document.getElementById('chg-amount').value = chg.amount || 0;
+      document.getElementById('modal-charge').classList.remove('hidden');
+      return;
+    }
+    const delIdx = e.target.dataset.delChg;
+    if (delIdx !== undefined) {
+      const sid = e.target.dataset.id;
+      const s = state.students.find(x => x.id === sid);
+      if (!s || !s.manualCharges) return;
+      const removed = s.manualCharges.splice(Number(delIdx), 1)[0];
+      if (!removed) return;
+      saveState();
+      pushToSheet({ action: 'deleteCharge', chargeId: removed.chargeId || '', studentId: sid, title: removed.title, amount: removed.amount });
+      renderAll();
+      showToast('Removed charge: ' + removed.title);
+      return;
+    }
     const act = e.target.dataset.action, id = e.target.dataset.id;
     if (!act || !id) return;
     const s = state.students.find(x => x.id === id);
     if (!s) return;
     if (act === 'add-charge') {
       document.getElementById('chg-stu-id').value = id;
+      document.getElementById('chg-edit-idx').value = '';
+      document.getElementById('chg-modal-title').textContent = 'Add Manual Charge';
+      document.getElementById('chg-title').value = '';
+      document.getElementById('chg-amount').value = '30';
       document.getElementById('chg-stu-label').textContent = s.name + ' (' + s.id + ')';
       document.getElementById('modal-charge').classList.remove('hidden');
     } else if (act === 'collect-pay') {
@@ -2016,14 +2150,61 @@
   document.getElementById('form-charge').addEventListener('submit', e => {
     e.preventDefault();
     const id = document.getElementById('chg-stu-id').value;
+    const editIdx = document.getElementById('chg-edit-idx').value;
     const s = state.students.find(x => x.id === id);
     if (!s) return;
     const title = document.getElementById('chg-title').value.trim(), amt = Number(document.getElementById('chg-amount').value) || 0;
     s.manualCharges = s.manualCharges || [];
-    s.manualCharges.push({ title, amount: amt });
-    saveState(); pushToSheet({ action: 'addCharge', studentId: id, title, amount: amt });
+    if (editIdx !== '') {
+      const chg = s.manualCharges[Number(editIdx)];
+      if (chg) {
+        const oldTitle = chg.title, oldAmount = chg.amount;
+        chg.title = title; chg.amount = amt;
+        saveState();
+        pushToSheet({ action: 'updateCharge', chargeId: chg.chargeId || '', studentId: id, oldTitle, oldAmount, title, amount: amt });
+        showToast('Updated charge: ' + title);
+      }
+    } else {
+      const cid = 'CHG-' + Date.now();
+      s.manualCharges.push({ chargeId: cid, title, amount: amt });
+      saveState();
+      pushToSheet({ action: 'addCharge', chargeId: cid, studentId: id, title, amount: amt });
+      showToast('Manual charge added');
+    }
     document.getElementById('modal-charge').classList.add('hidden');
-    e.target.reset(); renderAll(); showToast('Manual charge added');
+    e.target.reset(); renderAll();
+  });
+
+  document.getElementById('btn-open-batch-charge').addEventListener('click', () => {
+    const targets = filteredStudents();
+    if (!targets.length) { showToast('No students match the current batch filter'); return; }
+    const b = document.getElementById('filter-branch').value;
+    const c = document.getElementById('filter-class').value;
+    const sl = document.getElementById('filter-slot').value;
+    document.getElementById('bchg-target-label').textContent = `Applies to ${targets.length} student(s) (${b} • ${c} • ${sl})`;
+    document.getElementById('modal-batch-charge').classList.remove('hidden');
+  });
+
+  document.getElementById('form-batch-charge').addEventListener('submit', e => {
+    e.preventDefault();
+    const targets = filteredStudents();
+    if (!targets.length) return;
+    const title = document.getElementById('bchg-title').value.trim();
+    const amt = Number(document.getElementById('bchg-amount').value) || 0;
+    const baseTs = Date.now();
+    const items = [];
+    targets.forEach((s, idx) => {
+      const cid = 'CHG-' + baseTs + '-' + idx;
+      s.manualCharges = s.manualCharges || [];
+      s.manualCharges.push({ chargeId: cid, title, amount: amt });
+      items.push({ studentId: s.id, chargeId: cid });
+    });
+    saveState();
+    pushToSheet({ action: 'addBatchCharge', title, amount: amt, items });
+    document.getElementById('modal-batch-charge').classList.add('hidden');
+    e.target.reset();
+    renderAll();
+    showToast(`Added ${amt} BDT (${title}) to ${targets.length} student(s)`);
   });
 
   document.getElementById('form-pay').addEventListener('submit', e => {
@@ -2068,7 +2249,44 @@
     editingExamId = '';
     setExamFormMode(false);
     document.getElementById('ex-syllabus').value = '';
-    syncExamFormUI();
+    document.getElementById('ntc-datetime').value = '2026-11-26T09:00';
+  document.getElementById('form-post-notice').addEventListener('submit', e => {
+    e.preventDefault();
+    const n = {
+      id: 'NTC-' + Date.now(),
+      title: document.getElementById('ntc-title').value.trim(),
+      message: document.getElementById('ntc-msg').value.trim(),
+      videoUrl: document.getElementById('ntc-video').value.trim(),
+      dateTime: document.getElementById('ntc-datetime').value,
+      branch: document.getElementById('ntc-branch').value,
+      slot: 'ALL'
+    };
+    state.notices = state.notices || [];
+    state.notices.unshift(n);
+    saveState();
+    pushToSheet({ action: 'postNotice', notice: n });
+    if (typeof CoachingBridge !== 'undefined' && CoachingBridge.scheduleNoticeAlarm) {
+      try { CoachingBridge.scheduleNoticeAlarm(n.id, n.title, n.dateTime); } catch (_) {}
+    }
+    e.target.reset();
+    renderAll();
+    showToast('Notice posted & alarm armed');
+  });
+
+  document.getElementById('notices-list').addEventListener('click', e => {
+    const delId = e.target.dataset.delNotice;
+    if (!delId) return;
+    state.notices = (state.notices || []).filter(n => n.id !== delId);
+    saveState();
+    pushToSheet({ action: 'deleteNotice', noticeId: delId });
+    if (typeof CoachingBridge !== 'undefined' && CoachingBridge.cancelExamAlarm) {
+      try { CoachingBridge.cancelExamAlarm(delId); } catch (_) {}
+    }
+    renderAll();
+    showToast('Notice removed');
+  });
+
+  syncExamFormUI();
     renderExamManageList();
   }
 
@@ -2106,7 +2324,7 @@
       if (!ex) { cancelExamEdit(); return; }
       Object.assign(ex, f);
       saveState(); pushToSheet({ action: 'updateExam', exam: examForServer(ex) });
-      armAlarm(ex);
+      if (document.getElementById('ex-send-alarm') && document.getElementById('ex-send-alarm').checked) armAlarm(ex);
       const keepId = ex.id;
       cancelExamEdit(); renderAll();
       document.getElementById('select-exam-marks').value = keepId;
@@ -2117,7 +2335,7 @@
     const ex = Object.assign({ id: nextExamId(), scores: {} }, f);
     state.exams.unshift(ex);
     saveState(); pushToSheet({ action: 'postExam', exam: examForServer(ex) });
-    armAlarm(ex);
+    if (document.getElementById('ex-send-alarm') && document.getElementById('ex-send-alarm').checked) armAlarm(ex);
     document.getElementById('ex-syllabus').value = '';
     syncExamFormUI(); renderAll();
     document.getElementById('select-exam-marks').value = ex.id;
@@ -2150,6 +2368,30 @@
     cancelAlarm(id);
     renderAll();
     showToast('Deleted ' + removed.title);
+  });
+
+  document.getElementById('btn-save-batch-marks').addEventListener('click', () => {
+    const eid = document.getElementById('select-exam-marks').value;
+    const exam = state.exams.find(x => x.id === eid);
+    if (!exam) { showToast('Select an exam first'); return; }
+    const rows = document.querySelectorAll('#marks-entry-list input[data-mark-id][data-exam-id]');
+    if (!rows.length) { showToast('No students in current batch filter'); return; }
+    const byStudent = {};
+    rows.forEach(inp => {
+      const sid = inp.dataset.markId;
+      const part = inp.dataset.part || 'cq';
+      if (!byStudent[sid]) byStudent[sid] = Object.assign({ cq: 0, mcq: 0, prac: 0 }, (exam.scores && exam.scores[sid]) || {});
+      byStudent[sid][part] = Number(inp.value) || 0;
+    });
+    exam.scores = exam.scores || {};
+    const entries = Object.keys(byStudent).map(sid => {
+      exam.scores[sid] = byStudent[sid];
+      return { studentId: sid, cq: byStudent[sid].cq || 0, mcq: byStudent[sid].mcq || 0, prac: byStudent[sid].prac || 0 };
+    });
+    saveState();
+    pushToSheet({ action: 'saveBatchMarks', examId: eid, entries });
+    renderStudentView();
+    showToast('Saved marks for ' + entries.length + ' student(s) in batch');
   });
 
   document.getElementById('marks-entry-list').addEventListener('click', e => {
@@ -2317,7 +2559,7 @@
   });
 
   window.handleAndroidBack = function() {
-    const modals = ['modal-print', 'modal-stu-register', 'modal-admission', 'modal-pending', 'modal-qr', 'modal-charge', 'modal-pay', 'modal-settings', 'modal-install', 'modal-change-pass', 'modal-delete-stu', 'modal-delete-exam'];
+    const modals = ['modal-print', 'modal-stu-register', 'modal-admission', 'modal-pending', 'modal-qr', 'modal-batch-charge', 'modal-charge', 'modal-pay', 'modal-settings', 'modal-install', 'modal-change-pass', 'modal-delete-stu', 'modal-delete-exam'];
     for (let i = 0; i < modals.length; i++) {
       const m = document.getElementById(modals[i]);
       if (m && !m.classList.contains('hidden')) { m.classList.add('hidden'); return 'handled'; }
