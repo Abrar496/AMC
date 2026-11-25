@@ -196,7 +196,10 @@
           <option value="Chawkbazar">Chawkbazar</option>
           <option value="Home Tuition">Home Tuition</option>
         </select>
-        <button type="submit" class="py-2 rounded-xl bg-amber-500 text-slate-950 font-bold">Post Notice &amp; Set Alarm</button>
+        <select id="ntc-slot" class="inp border rounded-xl px-3 py-2">
+          <option value="ALL">All Slots</option>
+        </select>
+        <button type="submit" class="sm:col-span-2 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold">Post Notice &amp; Set Alarm</button>
       </form>
       <div id="notices-list" class="space-y-1.5"></div>
     </div>
@@ -1175,6 +1178,19 @@
       : slots.map(sl => `<option value="${esc(sl.name)}">${esc(sl.name)} (${esc(sl.days)} &bull; ${esc(sl.time)})</option>`).join('');
     if (Array.from(admSlot.options).some(o => o.value === curAdm)) admSlot.value = curAdm;
 
+    const ntcBranchEl = document.getElementById('ntc-branch');
+    const ntcSlotEl = document.getElementById('ntc-slot');
+    if (ntcBranchEl && ntcSlotEl) {
+      const curNtc = ntcSlotEl.value;
+      if (ntcBranchEl.value === 'Home Tuition') {
+        ntcSlotEl.innerHTML = '<option value="ALL">All Home Tuitions</option>' + hts.map(h => `<option value="${esc(h.name)}">${esc(h.name)} (${esc(h.time)})</option>`).join('');
+      } else {
+        ntcSlotEl.innerHTML = '<option value="ALL">All Slots</option>' + slots.map(sl => `<option value="${esc(sl.name)}">${esc(sl.name)} (${esc(sl.time)})</option>`).join('') +
+          (ntcBranchEl.value === 'ALL' ? hts.map(h => `<option value="${esc(h.name)}">${esc(h.name)} (${esc(h.time)})</option>`).join('') : '');
+      }
+      if (Array.from(ntcSlotEl.options).some(o => o.value === curNtc)) ntcSlotEl.value = curNtc;
+    }
+
     const regBranchEl = document.getElementById('reg-branch');
     const regSlotEl = document.getElementById('reg-slot');
     if (regBranchEl && regSlotEl) {
@@ -1434,7 +1450,7 @@
     box.innerHTML = list.map(n => `
       <div class="surface-2 border rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
         <div>
-          <p class="font-bold text-white-adapt">${esc(n.title)} <span class="text-amber-400 font-normal">&bull; ${esc(n.branch || 'ALL')}</span></p>
+          <p class="font-bold text-white-adapt">${esc(n.title)} <span class="text-amber-400 font-normal">&bull; ${esc(n.branch || 'ALL')} &bull; ${esc(n.slot || 'ALL')}</span></p>
           <p class="muted">${esc(n.message || '')} <span class="mono text-[11px] text-cyan-400">${esc(String(n.dateTime || '').replace('T', ' '))}</span></p>
         </div>
         <div class="flex items-center gap-1.5">
@@ -1470,7 +1486,7 @@
       `;
     }).join('') || '<p class="text-xs muted">No upcoming exams.</p>';
 
-    const stuNotices = (state.notices || []).filter(n => !n.branch || n.branch === 'ALL' || n.branch === s.branch);
+    const stuNotices = (state.notices || []).filter(n => (!n.branch || n.branch === 'ALL' || n.branch === s.branch) && (!n.slot || n.slot === 'ALL' || n.slot === s.slot));
     const snBox = document.getElementById('student-notices-list');
     if (snBox) {
       snBox.innerHTML = stuNotices.map(n => `
@@ -2271,6 +2287,7 @@
     setExamFormMode(false);
     document.getElementById('ex-syllabus').value = '';
     document.getElementById('ntc-datetime').value = '2026-11-26T09:00';
+  document.getElementById('ntc-branch').addEventListener('change', syncSlotDropdowns);
   document.getElementById('form-post-notice').addEventListener('submit', e => {
     e.preventDefault();
     const n = {
@@ -2280,7 +2297,7 @@
       videoUrl: document.getElementById('ntc-video').value.trim(),
       dateTime: document.getElementById('ntc-datetime').value,
       branch: document.getElementById('ntc-branch').value,
-      slot: 'ALL'
+      slot: (document.getElementById('ntc-slot') ? document.getElementById('ntc-slot').value : 'ALL')
     };
     state.notices = state.notices || [];
     state.notices.unshift(n);
