@@ -236,7 +236,7 @@
         <input id="att-date" type="date" class="inp text-xs border rounded-xl px-3 py-2">
         <input id="att-search" type="text" placeholder="Search student..." class="inp text-xs border rounded-xl px-3 py-2 w-44">
       </div>
-      <p class="text-[11px] muted">P = Present &bull; A = Absent &bull; L = Late</p>
+      <button id="btn-save-all-att" type="button" class="px-4 py-2 rounded-xl bg-cyan-500 text-slate-950 text-xs font-extrabold shadow">Save Attendance</button>
     </div>
     <div id="attendance-list" class="space-y-2.5"></div>
   </section>
@@ -1326,7 +1326,6 @@
             ${s.branch !== 'Home Tuition' ? `<input data-fine-id="${esc(s.id)}" type="number" min="0" value="${s.manualAbsentFine || 0}" class="inp w-16 border rounded-xl px-2 py-1 text-xs text-center" placeholder="Fine">` : ''}
             <button data-att="L" data-id="${esc(s.id)}" class="${btnCls('L', 'bg-amber-500')}">L</button>
             ${status ? `<button data-att="CLEAR" data-id="${esc(s.id)}" title="Remove attendance" class="px-2.5 py-1.5 rounded-xl text-xs font-bold surface-2 border text-slate-400 hover:text-rose-400">&times;</button>` : ''}
-            <button type="button" data-save-att="${esc(s.id)}" class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950">Save</button>
             ${status === 'A' ? `<a href="${waLink}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/15 text-emerald-400">WA Alert</a>` : ''}
           </div>
         </div>
@@ -2103,6 +2102,33 @@
     if (!s) return;
     s.manualAbsentFine = Number(e.target.value) || 0;
     saveState(); renderFeesTab(filteredStudents()); renderStudentView();
+  });
+
+  document.getElementById('btn-save-all-att').addEventListener('click', e => {
+    const list = filteredStudents();
+    if (!list.length) { showToast('No students in current filter'); return; }
+    const d = document.getElementById('att-date').value;
+    const entries = list.map(s => {
+      const fineInp = document.querySelector(`#attendance-list input[data-fine-id="${s.id}"]`);
+      if (fineInp) s.manualAbsentFine = Number(fineInp.value) || 0;
+      return {
+        studentId: s.id,
+        status: (s.attendance && s.attendance[d]) || '',
+        manualAbsentFine: s.branch === 'Home Tuition' ? 0 : (Number(s.manualAbsentFine) || 0)
+      };
+    });
+    saveState();
+    pushToSheet({ action: 'saveBatchAttendance', date: d, entries });
+    const btn = e.currentTarget;
+    btn.textContent = 'Done \u2713';
+    btn.className = 'px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 text-xs font-extrabold shadow';
+    setTimeout(() => {
+      btn.textContent = 'Save Attendance';
+      btn.className = 'px-4 py-2 rounded-xl bg-cyan-500 text-slate-950 text-xs font-extrabold shadow';
+    }, 2200);
+    renderFeesTab(filteredStudents());
+    renderStudentView();
+    showToast('Saved attendance & fines for ' + entries.length + ' student(s)');
   });
 
   document.getElementById('attendance-list').addEventListener('click', e => {
