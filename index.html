@@ -1326,6 +1326,7 @@
             ${s.branch !== 'Home Tuition' ? `<input data-fine-id="${esc(s.id)}" type="number" min="0" value="${s.manualAbsentFine || 0}" class="inp w-16 border rounded-xl px-2 py-1 text-xs text-center" placeholder="Fine">` : ''}
             <button data-att="L" data-id="${esc(s.id)}" class="${btnCls('L', 'bg-amber-500')}">L</button>
             ${status ? `<button data-att="CLEAR" data-id="${esc(s.id)}" title="Remove attendance" class="px-2.5 py-1.5 rounded-xl text-xs font-bold surface-2 border text-slate-400 hover:text-rose-400">&times;</button>` : ''}
+            <button type="button" data-save-att="${esc(s.id)}" class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950">Save</button>
             ${status === 'A' ? `<a href="${waLink}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/15 text-emerald-400">WA Alert</a>` : ''}
           </div>
         </div>
@@ -2105,6 +2106,23 @@
   });
 
   document.getElementById('attendance-list').addEventListener('click', e => {
+    const saveId = e.target.dataset.saveAtt;
+    if (saveId) {
+      const s = state.students.find(x => x.id === saveId);
+      if (!s) return;
+      const d = document.getElementById('att-date').value;
+      const fineInp = document.querySelector(`#attendance-list input[data-fine-id="${saveId}"]`);
+      if (fineInp) s.manualAbsentFine = Number(fineInp.value) || 0;
+      const st = (s.attendance && s.attendance[d]) || '';
+      saveState();
+      pushToSheet({ action: 'markAttendance', date: d, studentId: saveId, status: st, manualAbsentFine: s.manualAbsentFine || 0 });
+      e.target.textContent = 'Done \u2713';
+      e.target.className = 'px-2.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950';
+      renderFeesTab(filteredStudents());
+      renderStudentView();
+      showToast('Saved attendance & fine (' + (s.manualAbsentFine || 0) + ' BDT) for ' + s.name);
+      return;
+    }
     const att = e.target.dataset.att, id = e.target.dataset.id;
     if (!att || !id) return;
     const s = state.students.find(x => x.id === id);
@@ -2129,7 +2147,7 @@
       }
     }
     saveState();
-    pushToSheet({ action: 'markAttendance', date: d, studentId: id, status: nextAtt });
+    pushToSheet({ action: 'markAttendance', date: d, studentId: id, status: nextAtt, manualAbsentFine: s.manualAbsentFine || 0 });
     renderAll();
   });
 
@@ -2300,45 +2318,7 @@
     editingExamId = '';
     setExamFormMode(false);
     document.getElementById('ex-syllabus').value = '';
-    document.getElementById('ntc-datetime').value = '2026-11-26T09:00';
-  document.getElementById('ntc-branch').addEventListener('change', syncSlotDropdowns);
-  document.getElementById('form-post-notice').addEventListener('submit', e => {
-    e.preventDefault();
-    const n = {
-      id: 'NTC-' + Date.now(),
-      title: document.getElementById('ntc-title').value.trim(),
-      message: document.getElementById('ntc-msg').value.trim(),
-      videoUrl: document.getElementById('ntc-video').value.trim(),
-      dateTime: document.getElementById('ntc-datetime').value,
-      branch: document.getElementById('ntc-branch').value,
-      slot: (document.getElementById('ntc-slot') ? document.getElementById('ntc-slot').value : 'ALL')
-    };
-    state.notices = state.notices || [];
-    state.notices.unshift(n);
-    saveState();
-    pushToSheet({ action: 'postNotice', notice: n });
-    if (typeof CoachingBridge !== 'undefined' && CoachingBridge.scheduleNoticeAlarm) {
-      try { CoachingBridge.scheduleNoticeAlarm(n.id, n.title, n.dateTime); } catch (_) {}
-    }
-    e.target.reset();
-    renderAll();
-    showToast('Notice posted & alarm armed');
-  });
-
-  document.getElementById('notices-list').addEventListener('click', e => {
-    const delId = e.target.dataset.delNotice;
-    if (!delId) return;
-    state.notices = (state.notices || []).filter(n => n.id !== delId);
-    saveState();
-    pushToSheet({ action: 'deleteNotice', noticeId: delId });
-    if (typeof CoachingBridge !== 'undefined' && CoachingBridge.cancelExamAlarm) {
-      try { CoachingBridge.cancelExamAlarm(delId); } catch (_) {}
-    }
-    renderAll();
-    showToast('Notice removed');
-  });
-
-  syncExamFormUI();
+    syncExamFormUI();
     renderExamManageList();
   }
 
@@ -2701,6 +2681,44 @@
 
   syncExamFormUI();
   renderAll();
+document.getElementById('ntc-datetime').value = '2026-11-26T09:00';
+  document.getElementById('ntc-branch').addEventListener('change', syncSlotDropdowns);
+  document.getElementById('form-post-notice').addEventListener('submit', e => {
+    e.preventDefault();
+    const n = {
+      id: 'NTC-' + Date.now(),
+      title: document.getElementById('ntc-title').value.trim(),
+      message: document.getElementById('ntc-msg').value.trim(),
+      videoUrl: document.getElementById('ntc-video').value.trim(),
+      dateTime: document.getElementById('ntc-datetime').value,
+      branch: document.getElementById('ntc-branch').value,
+      slot: (document.getElementById('ntc-slot') ? document.getElementById('ntc-slot').value : 'ALL')
+    };
+    state.notices = state.notices || [];
+    state.notices.unshift(n);
+    saveState();
+    pushToSheet({ action: 'postNotice', notice: n });
+    if (typeof CoachingBridge !== 'undefined' && CoachingBridge.scheduleNoticeAlarm) {
+      try { CoachingBridge.scheduleNoticeAlarm(n.id, n.title, n.dateTime); } catch (_) {}
+    }
+    e.target.reset();
+    renderAll();
+    showToast('Notice posted & alarm armed');
+  });
+
+  document.getElementById('notices-list').addEventListener('click', e => {
+    const delId = e.target.dataset.delNotice;
+    if (!delId) return;
+    state.notices = (state.notices || []).filter(n => n.id !== delId);
+    saveState();
+    pushToSheet({ action: 'deleteNotice', noticeId: delId });
+    if (typeof CoachingBridge !== 'undefined' && CoachingBridge.cancelExamAlarm) {
+      try { CoachingBridge.cancelExamAlarm(delId); } catch (_) {}
+    }
+    renderAll();
+    showToast('Notice removed');
+  });
+
 })();
 </script>
 </body>
