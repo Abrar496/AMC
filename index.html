@@ -324,6 +324,20 @@
             <button id="btn-save-batch-marks" type="button" class="px-3 py-1.5 rounded-xl bg-cyan-500 text-slate-950 text-xs font-bold whitespace-nowrap">Save All Marks</button>
           </div>
         </div>
+        <!-- Instant Unannounced Test (No Notice / No Alarm) -->
+        <div class="surface-2 border rounded-xl p-2.5 space-y-2 text-xs">
+          <p class="text-[11px] font-bold text-cyan-400">Quick Marks Entry (No Exam Notice)</p>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+            <input id="qex-topic" type="text" placeholder="Topic / Test Name" class="inp col-span-2 border rounded-lg px-2.5 py-1.5 text-xs">
+            <select id="qex-type" class="inp border rounded-lg px-2 py-1.5 text-xs">
+              <option value="Class Test (CQ)">CQ</option>
+              <option value="Class Test (MCQ)">MCQ</option>
+              <option value="Class Test (CQ & MCQ)">CQ &amp; MCQ</option>
+            </select>
+            <input id="qex-max" type="number" min="1" value="20" placeholder="Max" class="inp border rounded-lg px-2 py-1.5 text-xs text-center font-semibold">
+          </div>
+          <button id="btn-quick-exam" type="button" class="w-full py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold text-xs">+ Start Quick Marks for Selected Batch</button>
+        </div>
         <div id="marks-entry-list" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
       </div>
     </div>
@@ -2406,6 +2420,43 @@
     cancelAlarm(id);
     renderAll();
     showToast('Deleted ' + removed.title);
+  });
+
+  document.getElementById('btn-quick-exam').addEventListener('click', () => {
+    const topic = document.getElementById('qex-topic').value.trim();
+    if (!topic) { showToast('Enter a topic or test name'); return; }
+    const qType = document.getElementById('qex-type').value;
+    const maxVal = Number(document.getElementById('qex-max').value) || 20;
+    const b = document.getElementById('filter-branch').value;
+    const c = document.getElementById('filter-class').value;
+    const sl = document.getElementById('filter-slot').value;
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const nowIso = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) + 'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+    const ex = {
+      id: nextExamId(),
+      title: topic,
+      subject: (document.getElementById('ex-subject') ? document.getElementById('ex-subject').value.trim() : '') || 'Higher Mathematics',
+      classYear: c === 'ALL' ? 'HSC 1st Year' : c,
+      type: qType,
+      dateTime: nowIso,
+      alarmTime: '',
+      branch: b,
+      slot: sl,
+      cqMax: /\bCQ\b/.test(qType) ? maxVal : 0,
+      mcqMax: /\bMCQ\b/.test(qType) ? maxVal : 0,
+      pracMax: 0,
+      syllabus: topic,
+      scores: {}
+    };
+    state.exams.unshift(ex);
+    saveState();
+    pushToSheet({ action: 'postExam', exam: examForServer(ex) });
+    document.getElementById('qex-topic').value = '';
+    renderAll();
+    document.getElementById('select-exam-marks').value = ex.id;
+    renderExamsTab(filteredStudents());
+    showToast('Ready — enter marks below and tap Save All Marks');
   });
 
   document.getElementById('btn-save-batch-marks').addEventListener('click', () => {
