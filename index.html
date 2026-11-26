@@ -930,13 +930,15 @@
   /* ---------- server link, teacher session, offline outbox ---------- */
   let sessionToken = '';
   let teacherMobile = '';
+  let activeGuardianPhone = '';
   let flushing = false;
   const scriptUrl = () => (state.config && state.config.scriptUrl) || '';
   const newOpId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
   async function apiPost(body) {
     const res = await fetch(scriptUrl(), { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
-    return res.json();
+    const raw = await res.text();
+    try { return JSON.parse(raw); } catch (_) { return { ok: false, error: 'Invalid server response (HTTP ' + res.status + ')' }; }
   }
 
   function updateSyncBadge() {
@@ -1033,7 +1035,7 @@
         const obj = Object.assign({ manualCharges: [], attendance: {}, photo: st.photoUrl || st.photo || '' }, st);
         if (Array.isArray(data.attendance)) {
           data.attendance.filter(a => String(a.studentId) === String(obj.id)).forEach(a => {
-            const dtStr = String(a.date || '').slice(0, 10);
+            const dtStr = String(a.date || '').replace(/^'/, '').slice(0, 10);
             if (dtStr) obj.attendance[dtStr] = a.status;
           });
         }
@@ -1055,6 +1057,9 @@
         }
         return Object.assign({ id: ex.examId || ex.id, scores: scMap }, ex);
       });
+    }
+    if (Array.isArray(data.notices) && (data.notices.length || full)) {
+      state.notices = data.notices.map(n => Object.assign({ id: n.noticeId || n.id }, n));
     }
   }
 
@@ -1082,7 +1087,7 @@
 
   function nextStudentId(branch, joiningMonth) {
     const code = branch === 'Chawkbazar' ? 'CBZ' : (branch === 'Home Tuition' ? 'HT' : 'GEC');
-    const yr = String(joiningMonth || '2026-11').slice(2, 4);
+    const yr = String(joiningMonth || (new Date().toISOString().slice(0, 7))).slice(2, 4);
     const prefix = 'AMC-' + code + '-' + yr + '-';
     const used = new Set(
       state.students
@@ -1428,7 +1433,7 @@
   }
 
   function renderStudentCalendar(s) {
-    const now = new Date(2026, 10, 21);
+    const now = new Date();
     const y = now.getFullYear(), m = now.getMonth();
     const monthKey = y + '-' + String(m + 1).padStart(2, '0');
     document.getElementById('student-cal-title').textContent = 'Calendar — ' + now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
@@ -1468,7 +1473,7 @@
           <p class="muted">${esc(n.message || '')} <span class="mono text-[11px] text-cyan-400">${esc(String(n.dateTime || '').replace('T', ' '))}</span></p>
         </div>
         <div class="flex items-center gap-1.5">
-          ${n.videoUrl ? `<a href="${esc(n.videoUrl)}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1 rounded-lg bg-cyan-500/15 text-cyan-400 font-bold">Watch Video</a>` : ''}
+          ${/^https?:\/\//i.test(String(n.videoUrl || "")) ? `<a href="${esc(n.videoUrl)}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1 rounded-lg bg-cyan-500/15 text-cyan-400 font-bold">Watch Video</a>` : ''}
           <button type="button" data-del-notice="${esc(n.id)}" class="px-2 py-1 rounded-lg bg-rose-500/15 text-rose-400 font-bold">Delete</button>
         </div>
       </div>
@@ -1478,9 +1483,10 @@
   function renderStudentView() {
     const sel = document.getElementById('student-portal-select');
     const prev = sel.value;
-    sel.innerHTML = state.students.map(s => `<option value="${esc(s.id)}">${esc(s.name)} (${esc(s.id)})</option>`).join('');
-    if (prev && state.students.some(s => s.id === prev)) sel.value = prev;
-    const s = state.students.find(x => x.id === sel.value) || state.students[0];
+    const visibleStudents = activeGuardianPhone ? state.students.filter(s => normPhone(s.guardianWa) === activeGuardianPhone) : state.students;
+    sel.innerHTML = visibleStudents.map(s => `<option value="${esc(s.id)}">${esc(s.name)} (${esc(s.id)})</option>`).join('');
+    if (prev && visibleStudents.some(s => s.id === prev)) sel.value = prev;
+    const s = visibleStudents.find(x => x.id === sel.value) || visibleStudents[0];
     if (!s) return;
     const l = calcLedger(s);
     const presentDays = Object.values(s.attendance || {}).filter(v => v === 'P').length;
@@ -1511,7 +1517,7 @@
           </div>
           <div class="flex flex-col items-end gap-1">
             <p class="mono font-semibold text-amber-400">Alarm: ${esc(String(n.dateTime || '').replace('T', ' '))}</p>
-            ${n.videoUrl ? `<a href="${esc(n.videoUrl)}" target="_blank" rel="noopener noreferrer" class="px-3 py-1 rounded-lg bg-cyan-500 text-slate-950 font-bold">Watch Video &rarr;</a>` : ''}
+            ${/^https?:\/\//i.test(String(n.videoUrl || "")) ? `<a href="${esc(n.videoUrl)}" target="_blank" rel="noopener noreferrer" class="px-3 py-1 rounded-lg bg-cyan-500 text-slate-950 font-bold">Watch Video &rarr;</a>` : ''}
           </div>
         </div>
       `).join('') || '<p class="text-xs muted">No coaching notices right now.</p>';
@@ -1679,7 +1685,7 @@
     const s = state.students.find(x => x.id === id);
     if (!s) return;
     const l = calcLedger(s);
-    const now = new Date(2026, 10, 21);
+    const now = new Date();
     const y = now.getFullYear(), m = now.getMonth();
     const monthKey = y + '-' + String(m + 1).padStart(2, '0');
     const firstDay = new Date(y, m, 1).getDay();
@@ -1852,6 +1858,7 @@
       match = state.students.find(s => normPhone(s.guardianWa) === gPhone) || null;
     }
     if (!match) { showToast('Guardian WhatsApp number not found'); return; }
+    activeGuardianPhone = gPhone;
     document.getElementById('login-view').classList.add('hidden');
     document.getElementById('teacher-view').classList.add('hidden');
     document.getElementById('student-view').classList.remove('hidden');
@@ -1897,7 +1904,7 @@
 
   document.getElementById('btn-logout').addEventListener('click', () => {
     if (sessionToken) { const t = sessionToken; apiPost({ action: 'logout', token: t }).catch(() => {}); }
-    sessionToken = ''; teacherMobile = '';
+    sessionToken = ''; teacherMobile = ''; activeGuardianPhone = '';
     document.getElementById('teacher-view').classList.add('hidden');
     document.getElementById('student-view').classList.add('hidden');
     document.getElementById('login-view').classList.remove('hidden');
@@ -2116,7 +2123,7 @@
         status: (s.attendance && s.attendance[d]) || '',
         manualAbsentFine: s.branch === 'Home Tuition' ? 0 : (Number(s.manualAbsentFine) || 0)
       };
-    });
+    }).filter(en => en.status !== '' || en.manualAbsentFine > 0);
     saveState();
     pushToSheet({ action: 'saveBatchAttendance', date: d, entries });
     const btn = e.currentTarget;
@@ -2294,6 +2301,7 @@
     const s = state.students.find(x => x.id === id);
     if (!s) return;
     const amt = Number(document.getElementById('pay-amount').value) || 0;
+    if (amt <= 0) { showToast('Enter a positive payment amount'); return; }
     s.paidCurrent = (Number(s.paidCurrent) || 0) + amt;
     saveState();
     pushToSheet({ action: 'collectPayment', studentId: id, paidCurrent: s.paidCurrent, manualAbsentFine: s.manualAbsentFine || 0 }); document.getElementById('modal-pay').classList.add('hidden');
@@ -2363,6 +2371,7 @@
     document.getElementById('ex-title').value = ex.title || '';
     document.getElementById('ex-subject').value = ex.subject || 'Higher Mathematics';
     document.getElementById('ex-datetime').value = String(ex.dateTime || '').slice(0, 16);
+    if (document.getElementById('ex-alarm-time')) document.getElementById('ex-alarm-time').value = String(ex.alarmTime || '').slice(0, 16);
     document.getElementById('ex-cq-max').value = Number(ex.cqMax) || '';
     document.getElementById('ex-mcq-max').value = Number(ex.mcqMax) || '';
     document.getElementById('ex-prac-max').value = Number(ex.pracMax) || '';
@@ -2382,7 +2391,7 @@
       if (!ex) { cancelExamEdit(); return; }
       Object.assign(ex, f);
       saveState(); pushToSheet({ action: 'updateExam', exam: examForServer(ex) });
-      if (document.getElementById('ex-send-alarm') && document.getElementById('ex-send-alarm').checked) armAlarm(ex);
+      if (document.getElementById('ex-send-alarm') && document.getElementById('ex-send-alarm').checked) armAlarm(ex); else if (typeof CoachingBridge !== 'undefined' && CoachingBridge.cancelExamAlarm) { try { CoachingBridge.cancelExamAlarm(ex.id); } catch (_) {} }
       const keepId = ex.id;
       cancelExamEdit(); renderAll();
       document.getElementById('select-exam-marks').value = keepId;
@@ -2393,7 +2402,7 @@
     const ex = Object.assign({ id: nextExamId(), scores: {} }, f);
     state.exams.unshift(ex);
     saveState(); pushToSheet({ action: 'postExam', exam: examForServer(ex) });
-    if (document.getElementById('ex-send-alarm') && document.getElementById('ex-send-alarm').checked) armAlarm(ex);
+    if (document.getElementById('ex-send-alarm') && document.getElementById('ex-send-alarm').checked) armAlarm(ex); else if (typeof CoachingBridge !== 'undefined' && CoachingBridge.cancelExamAlarm) { try { CoachingBridge.cancelExamAlarm(ex.id); } catch (_) {} }
     document.getElementById('ex-syllabus').value = '';
     syncExamFormUI(); renderAll();
     document.getElementById('select-exam-marks').value = ex.id;
@@ -2533,7 +2542,7 @@
     const prev = exam.scores[sid] || { cq: 0, mcq: 0, prac: 0 };
     prev[part] = Number(e.target.value) || 0;
     exam.scores[sid] = prev;
-    saveState(); pushToSheet({ action: 'saveMark', examId: eid, studentId: sid, cq: prev.cq || 0, mcq: prev.mcq || 0, prac: prev.prac || 0 }); renderStudentView();
+    saveState(); renderStudentView();
   });
 
   document.getElementById('btn-stu-admission-pdf').addEventListener('click', () => showAdmissionPdf(document.getElementById('student-portal-select').value));
@@ -2707,7 +2716,7 @@
 
   syncExamFormUI();
   renderAll();
-document.getElementById('ntc-datetime').value = '2026-11-26T09:00';
+const _n = new Date(Date.now() + 3600000), _p = x => String(x).padStart(2,'0'); document.getElementById('ntc-datetime').value = _n.getFullYear()+'-'+_p(_n.getMonth()+1)+'-'+_p(_n.getDate())+'T'+_p(_n.getHours())+':00';
   document.getElementById('ntc-branch').addEventListener('change', syncSlotDropdowns);
   document.getElementById('form-post-notice').addEventListener('submit', e => {
     e.preventDefault();
