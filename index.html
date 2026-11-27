@@ -89,6 +89,10 @@
         <label class="block font-semibold muted mb-1.5">Guardian WhatsApp Number</label>
         <input id="login-guardian-wa" type="tel" required placeholder="01XXXXXXXXX" class="inp w-full border rounded-xl px-4 py-3 text-sm">
       </div>
+      <div id="login-sid-wrap" class="hidden">
+        <label class="block font-semibold muted mb-1.5">Student ID (printed on the admission form)</label>
+        <input id="login-student-id" type="text" autocomplete="off" placeholder="AMC-GEC-26-001" class="inp w-full border rounded-xl px-4 py-3 text-sm">
+      </div>
       <button type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold text-sm shadow-lg">OPEN STUDENT PORTAL &rarr;</button>
       <button id="btn-open-stu-register" type="button" class="w-full py-2.5 rounded-xl surface-2 border text-cyan-400 font-bold text-xs">New Student? Register Here &rarr;</button>
     </form>
@@ -469,7 +473,7 @@
       </div>
       <div>
         <label class="block font-semibold muted mb-1">Joining Month *</label>
-        <input id="adm-joining" required type="month" value="2026-11" class="inp w-full border rounded-xl px-3 py-2">
+        <input id="adm-joining" required type="month" class="inp w-full border rounded-xl px-3 py-2">
       </div>
       <div>
         <label class="block font-semibold muted mb-1">Student WhatsApp *</label>
@@ -796,7 +800,7 @@
       </div>
       <div>
         <label class="block font-semibold muted mb-1">Joining Month *</label>
-        <input id="reg-joining" required type="month" value="2026-11" class="inp w-full border rounded-xl px-3 py-2">
+        <input id="reg-joining" required type="month" class="inp w-full border rounded-xl px-3 py-2">
       </div>
       <div class="sm:col-span-2 pt-2 flex justify-end gap-2">
         <button type="button" data-close="modal-stu-register" class="surface-2 border px-4 py-2 rounded-xl font-semibold">Cancel</button>
@@ -823,7 +827,8 @@
 
 <script>
 (function() {
-  const STORAGE_KEY = 'amc_portal_state_v1';
+  const STORAGE_KEY = 'amc_portal_state_v1';      // teacher data (this phone)
+  const GUEST_KEY = 'amc_guardian_state_v1';      // guardian data is kept SEPARATE from the teacher's data
 
   const defaultState = {
     config: {
@@ -855,11 +860,39 @@
   let pendingPhotoDataUrl = '';
   let editingExamId = '';
   let activePdfTitle = 'AbrarCoachingDocument';
+  let storeKey = STORAGE_KEY;
+  let viewerPhone = '';                 // set while a guardian is logged in: only that guardian's children are shown
+  let calCursor = null;                 // month shown in the student calendar
+  const ADM_BLANK = document.getElementById('adm-photo-preview').getAttribute('src');
+  const REG_BLANK = document.getElementById('reg-photo-preview').getAttribute('src');
+  const safeUrl = u => /^https?:\/\//i.test(String(u || '')) ? String(u) : '';
+  const curMonth = () => todayIso().slice(0, 7);
+  function nowLocalIso(addMin) {
+    const d = new Date(Date.now() + (addMin || 0) * 60000);
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + 'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  }
+  function calBase() { if (!calCursor) { const d = new Date(); calCursor = { y: d.getFullYear(), m: d.getMonth() }; } return calCursor; }
 
-  function loadState() {
+  function enterGuardianMode(gPhone) {
+    if (storeKey === STORAGE_KEY) saveState();                    // flush the teacher copy first
+    const url = (state.config && state.config.scriptUrl) || '';
+    storeKey = GUEST_KEY;
+    state = loadState(GUEST_KEY);
+    if (url) state.config.scriptUrl = url;
+    viewerPhone = gPhone;
+    calCursor = null;
+  }
+  function enterTeacherMode() {
+    if (storeKey !== STORAGE_KEY) { storeKey = STORAGE_KEY; state = loadState(STORAGE_KEY); }
+    viewerPhone = '';
+  }
+  const viewStudents = () => viewerPhone ? state.students.filter(s => normPhone(s.guardianWa) === viewerPhone) : state.students;
+  const noticeForStudent = (n, s) => (!n.branch || n.branch === 'ALL' || n.branch === s.branch) && (!n.slot || n.slot === 'ALL' || n.slot === s.slot);
+
+  function loadState(key) {
     let st = null;
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(key || STORAGE_KEY);
       if (raw) st = JSON.parse(raw);
     } catch (e) {}
     if (!st) st = JSON.parse(JSON.stringify(defaultState));
@@ -870,6 +903,7 @@
     st.exams = (st.exams || []).filter(x => !(x.id === 'EX-101' && x.syllabus === 'Higher Math 1st Paper Ch. 1A & 1B'));
     st.pendingAdmissions = st.pendingAdmissions || [];
     st.outbox = st.outbox || [];
+    st.notices = st.notices || [];
     return st;
   }
 
@@ -896,13 +930,15 @@
   }
   const pad2 = n => String(n).padStart(2, '0');
   function todayIso() { const d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
-  function nextExamId() {
+  function nextExamId() {                       // never reuses a number, even after an exam was deleted
     const nums = (state.exams || []).map(e => parseInt(String(e.id).replace(/\D/g, ''), 10)).filter(n => !isNaN(n));
-    return 'EX-' + (Math.max(100, ...nums) + 1);
+    const n = Math.max(100, Number(state.examSeq) || 0, ...nums) + 1;
+    state.examSeq = n;
+    return 'EX-' + n;
   }
 
   function saveState() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+    try { localStorage.setItem(storeKey, JSON.stringify(state)); } catch (e) {}
   }
 
   function normPhone(p) {
@@ -930,15 +966,30 @@
   /* ---------- server link, teacher session, offline outbox ---------- */
   let sessionToken = '';
   let teacherMobile = '';
-  let activeGuardianPhone = '';
   let flushing = false;
   const scriptUrl = () => (state.config && state.config.scriptUrl) || '';
   const newOpId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
-  async function apiPost(body) {
-    const res = await fetch(scriptUrl(), { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
-    const raw = await res.text();
-    try { return JSON.parse(raw); } catch (_) { return { ok: false, error: 'Invalid server response (HTTP ' + res.status + ')' }; }
+  async function apiPost(body, timeoutMs) {
+    const ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    const timer = ctl ? setTimeout(() => ctl.abort(), timeoutMs || 40000) : null;
+    try {
+      const res = await fetch(scriptUrl(), { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), signal: ctl ? ctl.signal : undefined });
+      return await res.json();
+    } finally { if (timer) clearTimeout(timer); }
+  }
+  // A random key that marks THIS phone as the teacher's usual phone (lets you log in even while the server is
+  // locking out strangers who guess passwords).
+  function deviceKey() {
+    try {
+      let k = localStorage.getItem('amc_device_key');
+      if (!k) {
+        const a = new Uint8Array(24); crypto.getRandomValues(a);
+        k = Array.from(a, b => ('0' + b.toString(16)).slice(-2)).join('');
+        localStorage.setItem('amc_device_key', k);
+      }
+      return k;
+    } catch (e) { return ''; }
   }
 
   function updateSyncBadge() {
@@ -951,9 +1002,43 @@
   // Every teacher change goes into a saved queue first, so nothing is lost offline.
   function pushToSheet(payload) {
     if (!scriptUrl()) return;
+    // typing a mark digit by digit: keep only the newest queued save for the same exam + student
+    if (payload.action === 'saveMark' && state.outbox.length > (flushing ? 1 : 0)) {
+      const last = state.outbox[state.outbox.length - 1];
+      const q = last.payload || {};
+      if (q.action === 'saveMark' && q.examId === payload.examId && q.studentId === payload.studentId) {
+        last.payload = payload; saveState(); updateSyncBadge(); flushOutbox(); return;
+      }
+    }
     state.outbox.push({ opId: newOpId(), payload: payload });
     saveState(); updateSyncBadge();
     flushOutbox();
+  }
+
+  // The server renamed an ID (two phones created the same one): follow the new ID everywhere, including queued changes.
+  function remapId(kind, oldId, newId) {
+    if (!oldId || !newId || oldId === newId) return;
+    if (kind === 'student') {
+      const st = state.students.find(x => x.id === oldId); if (st) st.id = newId;
+      state.exams.forEach(e => { if (e.scores && e.scores[oldId]) { e.scores[newId] = e.scores[oldId]; delete e.scores[oldId]; } });
+    } else {
+      const ex = state.exams.find(x => x.id === oldId); if (ex) ex.id = newId;
+      cancelAlarm(oldId);
+      if (ex) armAlarm(ex);
+    }
+    state.outbox.forEach(it => {
+      const p = it.payload; if (!p) return;
+      if (kind === 'student') {
+        if (p.studentId === oldId) p.studentId = newId;
+        if (p.student && p.student.id === oldId) p.student.id = newId;
+        (p.entries || []).forEach(en => { if (en.studentId === oldId) en.studentId = newId; });
+        (p.items || []).forEach(en => { if (en.studentId === oldId) en.studentId = newId; });
+      } else {
+        if (p.examId === oldId) p.examId = newId;
+        if (p.exam && p.exam.id === oldId) p.exam.id = newId;
+      }
+    });
+    saveState();
   }
 
   async function flushOutbox() {
@@ -964,13 +1049,38 @@
         const item = state.outbox[0];
         let data;
         try { data = await apiPost(Object.assign({}, item.payload, { opId: item.opId, token: sessionToken })); }
-        catch (e) { break; }                                   // offline: keep it queued
+        catch (e) {
+          if (e && e.name === 'SyntaxError') {                 // server answered with a non-JSON page (quota / error)
+            item.fails = (item.fails || 0) + 1; item.firstFail = item.firstFail || Date.now();
+            if (item.fails >= 4 && Date.now() - item.firstFail > 10 * 60 * 1000) {   // stuck for 10+ min: set it aside, do not block the rest
+              state.deadLetter = state.deadLetter || []; state.deadLetter.push(item);
+              state.outbox.shift(); saveState(); updateSyncBadge();
+              showToast('One change could not be uploaded and was set aside (still on this phone)');
+              continue;
+            }
+            saveState();
+          }
+          break;                                                 // offline / timeout / server hiccup: keep it queued
+        }
         if (data && data.auth) { sessionToken = ''; showToast('Session expired — log in again to upload pending changes'); break; }
         if (data && data.retry) break;                         // server busy: try again later
         if (!data || !data.ok) showToast('Server rejected a change: ' + ((data && data.error) || 'unknown error'));
+        else {
+          const act = item.payload && item.payload.action;
+          if (data.renamedFrom) {
+            remapId(act === 'postExam' ? 'exam' : 'student', data.renamedFrom, data.examId || data.id);
+            showToast('ID ' + data.renamedFrom + ' was already used on another phone — saved as ' + (data.examId || data.id));
+          }
+          if (act === 'collectPayment' && typeof data.paidCurrent === 'number') {
+            const sid = item.payload.studentId;
+            const more = state.outbox.some((q, i) => i > 0 && q.payload && q.payload.action === 'collectPayment' && q.payload.studentId === sid);
+            const st = state.students.find(x => x.id === sid);
+            if (st && !more) st.paidCurrent = data.paidCurrent;       // the server's total is the truth
+          }
+        }
         state.outbox.shift(); saveState(); updateSyncBadge();
       }
-    } finally { flushing = false; updateSyncBadge(); }
+    } finally { flushing = false; updateSyncBadge(); try { renderAll(); } catch (_) {} }
   }
   window.addEventListener('online', flushOutbox);
 
@@ -1012,15 +1122,28 @@
   }
 
   /* ---------- exam alarms (Android bridge) ---------- */
-  function armAlarm(ex) { try { if (typeof CoachingBridge !== 'undefined') if (ex.alarmTime && CoachingBridge.scheduleNoticeAlarm) CoachingBridge.scheduleNoticeAlarm(ex.id, ex.title, ex.alarmTime); else CoachingBridge.scheduleExamAlarm12h(ex.id, ex.title, ex.dateTime); } catch (_) {} }
+  function armAlarm(ex) {
+    try {
+      if (typeof CoachingBridge === 'undefined') return;
+      if (CoachingBridge.scheduleExamAlarmAt) CoachingBridge.scheduleExamAlarmAt(ex.id, ex.title, ex.dateTime, ex.alarmTime || '');
+      else CoachingBridge.scheduleExamAlarm12h(ex.id, ex.title, ex.dateTime);
+    } catch (_) {}
+  }
   function cancelAlarm(id) { try { if (typeof CoachingBridge !== 'undefined' && CoachingBridge.cancelExamAlarm) CoachingBridge.cancelExamAlarm(id); } catch (_) {} }
+  function cancelNoticeAlarmFor(id) { try { if (typeof CoachingBridge !== 'undefined') { if (CoachingBridge.cancelNoticeAlarm) CoachingBridge.cancelNoticeAlarm(id); else if (CoachingBridge.cancelExamAlarm) CoachingBridge.cancelExamAlarm(id); } } catch (_) {} }
+  // Make the phone's exam alarms AND notice alarms match what these students should get (done once per login/sync,
+  // not on every screen refresh).
   function syncAlarmsFor(students) {
     if (typeof CoachingBridge === 'undefined') return;
-    const list = state.exams.filter(e => students.some(st => examsForStudent(st).indexOf(e) !== -1))
-      .map(e => ({ id: e.id, title: e.title, dateTime: e.dateTime }));
+    const exams = state.exams.filter(e => students.some(st => examsForStudent(st).indexOf(e) !== -1))
+      .map(e => ({ id: e.id, title: e.title, dateTime: e.dateTime, alarmTime: e.alarmTime || '' }));
+    const notices = (state.notices || []).filter(n => students.some(st => noticeForStudent(n, st)))
+      .map(n => ({ id: n.id, title: n.title, dateTime: n.dateTime }));
     try {
-      if (CoachingBridge.syncExamAlarms) CoachingBridge.syncExamAlarms(JSON.stringify(list));
-      else list.forEach(e => CoachingBridge.scheduleExamAlarm12h(e.id, e.title, e.dateTime));
+      if (CoachingBridge.syncExamAlarms) CoachingBridge.syncExamAlarms(JSON.stringify(exams));
+      else exams.forEach(e => CoachingBridge.scheduleExamAlarm12h(e.id, e.title, e.dateTime));
+      if (CoachingBridge.syncNoticeAlarms) CoachingBridge.syncNoticeAlarms(JSON.stringify(notices));
+      else if (CoachingBridge.scheduleNoticeAlarm) notices.forEach(n => CoachingBridge.scheduleNoticeAlarm(n.id, n.title, n.dateTime));
     } catch (_) {}
   }
 
@@ -1035,7 +1158,7 @@
         const obj = Object.assign({ manualCharges: [], attendance: {}, photo: st.photoUrl || st.photo || '' }, st);
         if (Array.isArray(data.attendance)) {
           data.attendance.filter(a => String(a.studentId) === String(obj.id)).forEach(a => {
-            const dtStr = String(a.date || '').replace(/^'/, '').slice(0, 10);
+            const dtStr = String(a.date || '').slice(0, 10);
             if (dtStr) obj.attendance[dtStr] = a.status;
           });
         }
@@ -1059,7 +1182,8 @@
       });
     }
     if (Array.isArray(data.notices) && (data.notices.length || full)) {
-      state.notices = data.notices.map(n => Object.assign({ id: n.noticeId || n.id }, n));
+      state.notices = data.notices.map(n => Object.assign({}, n, { id: n.noticeId || n.id }))
+        .sort((a, b) => String(b.createdAt || b.dateTime || '').localeCompare(String(a.createdAt || a.dateTime || '')));
     }
   }
 
@@ -1072,7 +1196,10 @@
       const data = await apiPost({ action: 'teacherSync', token: sessionToken });
       if (data && data.auth) { sessionToken = ''; showToast('Session expired — please log in again'); return; }
       if (data && data.ok) {
-        applySheetPayload(data, { replaceAll: true });
+        const d = Object.assign({}, data);        // never wipe the phone's copy because the sheet answered with an empty list
+        if (Array.isArray(d.students) && !d.students.length && state.students.length) { delete d.students; showToast('Sheet returned no students — kept the copy on this phone'); }
+        if (Array.isArray(d.exams) && !d.exams.length && state.exams.length) delete d.exams;
+        applySheetPayload(d, { replaceAll: true });
         saveState();
         renderAll();
         if (!document.getElementById('modal-pending').classList.contains('hidden')) renderPendingModal();
@@ -1087,7 +1214,7 @@
 
   function nextStudentId(branch, joiningMonth) {
     const code = branch === 'Chawkbazar' ? 'CBZ' : (branch === 'Home Tuition' ? 'HT' : 'GEC');
-    const yr = String(joiningMonth || (new Date().toISOString().slice(0, 7))).slice(2, 4);
+    const yr = String(joiningMonth || curMonth()).slice(2, 4);
     const prefix = 'AMC-' + code + '-' + yr + '-';
     const used = new Set(
       state.students
@@ -1113,7 +1240,8 @@
     const paid = Number(s.paidCurrent) || 0;
     const totalBill = prevDue + netFee + fine + manualTotal;
     const due = Math.max(0, totalBill - paid);
-    return { isCycle, cycleTarget, presentCount, netFee, absentCount, fine, manualTotal, prevDue, paid, totalBill, due };
+    const credit = Math.max(0, paid - totalBill);          // paid more than billed = advance, shown instead of being lost
+    return { isCycle, cycleTarget, presentCount, netFee, absentCount, fine, manualTotal, prevDue, paid, totalBill, due, credit };
   }
 
   function getClasses() {
@@ -1359,7 +1487,7 @@
             ${(s.manualCharges && s.manualCharges.length) ? `<div class="flex flex-wrap gap-1.5 pt-1">${s.manualCharges.map((c, idx) => `<span class="surface-2 border rounded-lg px-2 py-0.5 text-[11px] flex items-center gap-1.5"><span>${esc(c.title)}: <strong>${c.amount}</strong></span><button type="button" data-edit-chg="${idx}" data-id="${esc(s.id)}" class="text-cyan-400 font-bold">Edit</button><button type="button" data-del-chg="${idx}" data-id="${esc(s.id)}" class="text-rose-400 font-bold">&times;</button></span>`).join('')}</div>` : ''}
           </div>
           <div class="flex flex-wrap items-center gap-1.5">
-            <span class="mono text-sm font-bold ${l.due > 0 ? 'text-rose-400' : 'text-emerald-400'} mr-1">Due: ${l.due} BDT</span>
+            <span class="mono text-sm font-bold ${l.due > 0 ? 'text-rose-400' : 'text-emerald-400'} mr-1">${l.credit > 0 ? 'Advance: ' + l.credit : 'Due: ' + l.due} BDT</span>
             <button data-action="add-charge" data-id="${esc(s.id)}" class="surface-2 border px-2.5 py-1.5 rounded-xl text-xs font-semibold">+ Charge</button>
             <button data-action="collect-pay" data-id="${esc(s.id)}" class="bg-emerald-500 text-slate-950 px-3 py-1.5 rounded-xl text-xs font-bold">Collect</button>
             <button data-action="fee-receipt-pdf" data-id="${esc(s.id)}" class="bg-cyan-500/15 text-cyan-400 px-2.5 py-1.5 rounded-xl text-xs font-semibold">Receipt PDF</button>
@@ -1409,11 +1537,10 @@
     const showMcq = /\bMCQ\b/.test(tStr) || tStr === 'Final Test' || Number(exam.mcqMax) > 0;
     const showPrac = tStr === 'Final Test' || Number(exam.pracMax) > 0;
     if (!showCq && !showMcq && !showPrac) showCq = true;
-    container.innerHTML = list.map(s => {
+    container.innerHTML = list.filter(s => examsForStudent(s).indexOf(exam) !== -1).map(s => {
       const sc = (exam.scores || {})[s.id] || { cq: '', mcq: '', prac: '' };
       const total = (showCq ? (Number(sc.cq) || 0) : 0) + (showMcq ? (Number(sc.mcq) || 0) : 0) + (showPrac ? (Number(sc.prac) || 0) : 0);
       const maxTotal = (showCq ? (Number(exam.cqMax) || 0) : 0) + (showMcq ? (Number(exam.mcqMax) || 0) : 0) + (showPrac ? (Number(exam.pracMax) || 0) : 0);
-      const waMsg = `Abrar Math Coaching Result (${esc(exam.title)}): ${esc(s.name)} (${esc(s.id)}) scored ${total}/${maxTotal}.`;
       return `
         <div class="surface-2 border rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
           <div>
@@ -1429,12 +1556,24 @@
           </div>
         </div>
       `;
-    }).join('');
+    }).join('') || '<p class="text-xs muted">No student in the current filter belongs to this exam.</p>';
   }
 
   function renderStudentCalendar(s) {
-    const now = new Date();
-    const y = now.getFullYear(), m = now.getMonth();
+    const cur = calBase(); const y = cur.y, m = cur.m;
+    const now = new Date(y, m, 1);
+    const titleEl = document.getElementById('student-cal-title');
+    if (!document.getElementById('cal-prev')) {                   // month arrows, built once
+      const mk = (id, t, d) => {
+        const b = document.createElement('button'); b.id = id; b.type = 'button'; b.textContent = t;
+        b.className = 'surface-2 border px-2.5 py-0.5 rounded-lg text-sm font-bold';
+        b.addEventListener('click', () => { const c = calBase(); const n = new Date(c.y, c.m + d, 1); calCursor = { y: n.getFullYear(), m: n.getMonth() }; renderStudentView(); });
+        return b;
+      };
+      const wrap = document.createElement('div'); wrap.className = 'flex items-center gap-2';
+      titleEl.parentNode.insertBefore(wrap, titleEl);
+      wrap.appendChild(mk('cal-prev', '\u2039', -1)); wrap.appendChild(titleEl); wrap.appendChild(mk('cal-next', '\u203A', 1));
+    }
     const monthKey = y + '-' + String(m + 1).padStart(2, '0');
     document.getElementById('student-cal-title').textContent = 'Calendar — ' + now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
     const firstDay = new Date(y, m, 1).getDay();
@@ -1473,7 +1612,7 @@
           <p class="muted">${esc(n.message || '')} <span class="mono text-[11px] text-cyan-400">${esc(String(n.dateTime || '').replace('T', ' '))}</span></p>
         </div>
         <div class="flex items-center gap-1.5">
-          ${/^https?:\/\//i.test(String(n.videoUrl || "")) ? `<a href="${esc(n.videoUrl)}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1 rounded-lg bg-cyan-500/15 text-cyan-400 font-bold">Watch Video</a>` : ''}
+          ${safeUrl(n.videoUrl) ? `<a href="${esc(safeUrl(n.videoUrl))}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1 rounded-lg bg-cyan-500/15 text-cyan-400 font-bold">Watch Video</a>` : ''}
           <button type="button" data-del-notice="${esc(n.id)}" class="px-2 py-1 rounded-lg bg-rose-500/15 text-rose-400 font-bold">Delete</button>
         </div>
       </div>
@@ -1483,10 +1622,10 @@
   function renderStudentView() {
     const sel = document.getElementById('student-portal-select');
     const prev = sel.value;
-    const visibleStudents = activeGuardianPhone ? state.students.filter(s => normPhone(s.guardianWa) === activeGuardianPhone) : state.students;
-    sel.innerHTML = visibleStudents.map(s => `<option value="${esc(s.id)}">${esc(s.name)} (${esc(s.id)})</option>`).join('');
-    if (prev && visibleStudents.some(s => s.id === prev)) sel.value = prev;
-    const s = visibleStudents.find(x => x.id === sel.value) || visibleStudents[0];
+    const vs = viewStudents();                                   // guardians only ever see their own children
+    sel.innerHTML = vs.map(s => `<option value="${esc(s.id)}">${esc(s.name)} (${esc(s.id)})</option>`).join('');
+    if (prev && vs.some(s => s.id === prev)) sel.value = prev;
+    const s = vs.find(x => x.id === sel.value) || vs[0];
     if (!s) return;
     const l = calcLedger(s);
     const presentDays = Object.values(s.attendance || {}).filter(v => v === 'P').length;
@@ -1506,7 +1645,7 @@
       `;
     }).join('') || '<p class="text-xs muted">No upcoming exams.</p>';
 
-    const stuNotices = (state.notices || []).filter(n => (!n.branch || n.branch === 'ALL' || n.branch === s.branch) && (!n.slot || n.slot === 'ALL' || n.slot === s.slot));
+    const stuNotices = (state.notices || []).filter(n => noticeForStudent(n, s));
     const snBox = document.getElementById('student-notices-list');
     if (snBox) {
       snBox.innerHTML = stuNotices.map(n => `
@@ -1517,13 +1656,10 @@
           </div>
           <div class="flex flex-col items-end gap-1">
             <p class="mono font-semibold text-amber-400">Alarm: ${esc(String(n.dateTime || '').replace('T', ' '))}</p>
-            ${/^https?:\/\//i.test(String(n.videoUrl || "")) ? `<a href="${esc(n.videoUrl)}" target="_blank" rel="noopener noreferrer" class="px-3 py-1 rounded-lg bg-cyan-500 text-slate-950 font-bold">Watch Video &rarr;</a>` : ''}
+            ${safeUrl(n.videoUrl) ? `<a href="${esc(safeUrl(n.videoUrl))}" target="_blank" rel="noopener noreferrer" class="px-3 py-1 rounded-lg bg-cyan-500 text-slate-950 font-bold">Watch Video &rarr;</a>` : ''}
           </div>
         </div>
       `).join('') || '<p class="text-xs muted">No coaching notices right now.</p>';
-    }
-    if (typeof CoachingBridge !== 'undefined' && CoachingBridge.scheduleNoticeAlarm) {
-      stuNotices.forEach(n => { try { CoachingBridge.scheduleNoticeAlarm(n.id, n.title, n.dateTime); } catch (_) {} });
     }
     renderStudentCalendar(s);
     document.getElementById('student-summary-cards').innerHTML = `
@@ -1542,7 +1678,7 @@
       <p>Previous Due: <strong class="text-white-adapt">${l.prevDue} BDT</strong></p>
       <p>${l.isCycle ? `Tuition (${l.cycleTarget}-Day Cycle &bull; ${l.presentCount}/${l.cycleTarget} Done)` : `Monthly Fee (${s.monthlyFee} - ${s.scholarship} Schol)`}: <strong class="text-white-adapt">${l.netFee} BDT</strong></p>
       <p>Manual Charges: <strong class="text-white-adapt">${l.manualTotal} BDT</strong></p>
-      <p>Paid: <strong class="text-emerald-400">${l.paid} BDT</strong> &bull; Remaining Due: <strong class="text-amber-400">${l.due} BDT</strong></p>
+      <p>Paid: <strong class="text-emerald-400">${l.paid} BDT</strong> &bull; Remaining Due: <strong class="text-amber-400">${l.due} BDT</strong>${l.credit > 0 ? ' &bull; Advance: <strong class="text-emerald-400">' + l.credit + ' BDT</strong>' : ''}</p>
     `;
   }
 
@@ -1675,7 +1811,7 @@
         <p>Previous Due: <strong>${l.prevDue} BDT</strong></p>
         <p>Net Tuition Fee: <strong>${l.netFee} BDT</strong></p>
         <p>Absence Fines: <strong>${l.fine} BDT</strong> &bull; Manual Charges: <strong>${l.manualTotal} BDT</strong></p>
-        <p class="text-sm font-bold border-t pt-2">Total Paid: ${l.paid} BDT &bull; Remaining Due: ${l.due} BDT</p>
+        <p class="text-sm font-bold border-t pt-2">Total Paid: ${l.paid} BDT &bull; Remaining Due: ${l.due} BDT${l.credit > 0 ? ' &bull; Advance: ' + l.credit + ' BDT' : ''}</p>
       </div>
     `;
     openPrintModal('Fee Receipt — ' + s.id, html, s.guardianWa);
@@ -1685,8 +1821,8 @@
     const s = state.students.find(x => x.id === id);
     if (!s) return;
     const l = calcLedger(s);
-    const now = new Date();
-    const y = now.getFullYear(), m = now.getMonth();
+    const ad = String(document.getElementById('att-date').value || todayIso()).split('-');   // month of the date picked on the Attendance tab
+    const y = Number(ad[0]), m = Number(ad[1]) - 1;
     const monthKey = y + '-' + String(m + 1).padStart(2, '0');
     const firstDay = new Date(y, m, 1).getDay();
     const daysInMonth = new Date(y, m + 1, 0).getDate();
@@ -1700,7 +1836,7 @@
     }
     const html = `
       <div class="space-y-3 text-xs">
-        ${pdfHeaderHtml('Current Month Attendance Calendar', '', s.branch === 'Home Tuition')}
+        ${pdfHeaderHtml('Attendance Calendar \u2014 ' + new Date(y, m, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' }), '', s.branch === 'Home Tuition')}
         <p><strong>${esc(s.name)}</strong> (<span class="mono">${esc(s.id)}</span>) &bull; ${formatStudentSlot(s)}</p>
         <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center;">${cells}</div>
       </div>
@@ -1836,37 +1972,46 @@
   document.getElementById('form-student-login').addEventListener('submit', async e => {
     e.preventDefault();
     const gPhone = normPhone(document.getElementById('login-guardian-wa').value);
-    let match = null;
+    const sid = document.getElementById('login-student-id').value.trim();
+    const sidShown = !document.getElementById('login-sid-wrap').classList.contains('hidden');
     const url = scriptUrl();
+    // offline: only this guardian's OWN saved copy is used, never the teacher's data
+    const offlineMatch = () => {
+      const gs = loadState(GUEST_KEY);
+      const mine = (gs.students || []).filter(x => normPhone(x.guardianWa) === gPhone);
+      if (!mine.length) return false;
+      if (sidShown && !mine.some(x => String(x.id).toUpperCase() === sid.toUpperCase())) return false;
+      enterGuardianMode(gPhone);
+      return true;
+    };
     if (url) {
       try {
         showToast('Checking student record...');
-        const res = await fetch(url + '?action=studentLogin&guardianWa=' + encodeURIComponent(gPhone));
+        const res = await fetch(url + '?action=studentLogin&guardianWa=' + encodeURIComponent(gPhone) + (sid ? '&studentId=' + encodeURIComponent(sid) : ''));
         const data = await res.json();
         if (data && data.ok && Array.isArray(data.students) && data.students.length) {
+          enterGuardianMode(gPhone);
           applySheetPayload(data, { replaceAll: true });
           saveState();
-          match = state.students[0];
         } else {
+          if (data && data.needStudentId) document.getElementById('login-sid-wrap').classList.remove('hidden');
           showToast((data && data.error) || 'Guardian WhatsApp number not found');
           return;
         }
       } catch (_) {
-        match = state.students.find(s => normPhone(s.guardianWa) === gPhone) || null;   // offline: saved copy
+        if (!offlineMatch()) { showToast('No connection, and there is no saved copy for this number'); return; }
+        showToast('Offline — showing your saved copy');
       }
-    } else {
-      match = state.students.find(s => normPhone(s.guardianWa) === gPhone) || null;
-    }
-    if (!match) { showToast('Guardian WhatsApp number not found'); return; }
-    activeGuardianPhone = gPhone;
+    } else if (!offlineMatch()) { showToast('Guardian WhatsApp number not found'); return; }
+    const mine = viewStudents();
+    if (!mine.length) { enterTeacherMode(); showToast('Guardian WhatsApp number not found'); return; }
     document.getElementById('login-view').classList.add('hidden');
     document.getElementById('teacher-view').classList.add('hidden');
     document.getElementById('student-view').classList.remove('hidden');
     document.getElementById('btn-logout').classList.remove('hidden');
+    document.getElementById('student-portal-select').value = '';
     renderStudentView();
-    document.getElementById('student-portal-select').value = match.id;
-    renderStudentView();
-    syncAlarmsFor(state.students.filter(st => normPhone(st.guardianWa) === gPhone));
+    syncAlarmsFor(mine);
   });
 
   document.getElementById('form-teacher-login').addEventListener('submit', async e => {
@@ -1878,7 +2023,7 @@
     if (scriptUrl()) {
       try {
         showToast('Signing in…');
-        const d = await apiPost({ action: 'teacherLogin', mobile: mob, password: pass });
+        const d = await apiPost({ action: 'teacherLogin', mobile: mob, password: pass, deviceKey: deviceKey() });
         if (d && d.ok) { sessionToken = d.token; ok = true; await rememberLocalLogin(mob, pass); }
         else { showToast((d && d.error) || 'Invalid teacher mobile or password'); return; }
       } catch (err) {
@@ -1890,6 +2035,7 @@
       ok = await verifyLocalLogin(mob, pass);
       if (!ok) { showToast('Set the admission/sync link first'); return; }
     }
+    enterTeacherMode();
     teacherMobile = mob;
     document.getElementById('login-teacher-pass').value = '';
     document.getElementById('login-view').classList.add('hidden');
@@ -1904,7 +2050,11 @@
 
   document.getElementById('btn-logout').addEventListener('click', () => {
     if (sessionToken) { const t = sessionToken; apiPost({ action: 'logout', token: t }).catch(() => {}); }
-    sessionToken = ''; teacherMobile = ''; activeGuardianPhone = '';
+    sessionToken = ''; teacherMobile = '';
+    enterTeacherMode();                                   // leaves guardian data behind; teacher copy untouched
+    document.getElementById('login-guardian-wa').value = ''; document.getElementById('login-student-id').value = '';
+    document.getElementById('login-sid-wrap').classList.add('hidden');
+    document.getElementById('student-portal-select').innerHTML = '';
     document.getElementById('teacher-view').classList.add('hidden');
     document.getElementById('student-view').classList.add('hidden');
     document.getElementById('login-view').classList.remove('hidden');
@@ -1935,6 +2085,8 @@
     document.getElementById('adm-edit-id').value = '';
     document.getElementById('adm-modal-title').textContent = 'New Student Admission Form';
     document.getElementById('form-admission').reset();
+    document.getElementById('adm-photo-preview').src = ADM_BLANK;
+    document.getElementById('adm-joining').value = curMonth();
     syncSlotDropdowns();
     document.getElementById('modal-admission').classList.remove('hidden');
   });
@@ -2082,7 +2234,7 @@
         slotEl.add(new Option(stu.slot, stu.slot));
       }
       slotEl.value = stu.slot || (slotEl.options[0] ? slotEl.options[0].value : '');
-      document.getElementById('adm-joining').value = String(stu.joiningMonth || '2026-11').slice(0, 7);
+      document.getElementById('adm-joining').value = String(stu.joiningMonth || curMonth()).slice(0, 7);
       document.getElementById('adm-stu-wa').value = stu.studentWa || '';
       document.getElementById('adm-gua-wa').value = stu.guardianWa || '';
       document.getElementById('adm-email').value = stu.email || '';
@@ -2090,7 +2242,7 @@
       document.getElementById('adm-fee').value = stu.monthlyFee || 0;
       document.getElementById('adm-scholarship').value = stu.scholarship || 0;
       pendingPhotoDataUrl = stu.photo || '';
-      if (stu.photo) document.getElementById('adm-photo-preview').src = stu.photo;
+      document.getElementById('adm-photo-preview').src = stu.photo || ADM_BLANK;
       document.getElementById('modal-admission').classList.remove('hidden');
     }
     if (act === 'delete-student') {
@@ -2123,7 +2275,7 @@
         status: (s.attendance && s.attendance[d]) || '',
         manualAbsentFine: s.branch === 'Home Tuition' ? 0 : (Number(s.manualAbsentFine) || 0)
       };
-    }).filter(en => en.status !== '' || en.manualAbsentFine > 0);
+    });
     saveState();
     pushToSheet({ action: 'saveBatchAttendance', date: d, entries });
     const btn = e.currentTarget;
@@ -2301,14 +2453,16 @@
     const s = state.students.find(x => x.id === id);
     if (!s) return;
     const amt = Number(document.getElementById('pay-amount').value) || 0;
-    if (amt <= 0) { showToast('Enter a positive payment amount'); return; }
+    if (!(amt > 0)) { showToast('Enter an amount greater than 0'); return; }
     s.paidCurrent = (Number(s.paidCurrent) || 0) + amt;
     saveState();
-    pushToSheet({ action: 'collectPayment', studentId: id, paidCurrent: s.paidCurrent, manualAbsentFine: s.manualAbsentFine || 0 }); document.getElementById('modal-pay').classList.add('hidden');
+    pushToSheet({ action: 'collectPayment', studentId: id, amount: amt, paidCurrent: s.paidCurrent, manualAbsentFine: s.manualAbsentFine || 0 }); document.getElementById('modal-pay').classList.add('hidden');
     renderAll(); showFeeReceiptPdf(id);
   });
 
+  let alarmAuto = true;            // false once the teacher typed their own alarm time
   function suggestDefaultAlarmTime() {
+    if (!alarmAuto) return;
     const dtVal = document.getElementById('ex-datetime').value;
     const alEl = document.getElementById('ex-alarm-time');
     if (!dtVal || !alEl) return;
@@ -2319,6 +2473,7 @@
     alEl.value = pre.getFullYear() + '-' + pad(pre.getMonth() + 1) + '-' + pad(pre.getDate()) + 'T' + pad(pre.getHours()) + ':' + pad(pre.getMinutes());
   }
   document.getElementById('ex-datetime').addEventListener('change', suggestDefaultAlarmTime);
+  document.getElementById('ex-alarm-time').addEventListener('input', () => { alarmAuto = false; });
   suggestDefaultAlarmTime();
 
   document.getElementById('ex-type').addEventListener('change', syncExamFormUI);
@@ -2351,6 +2506,7 @@
   function cancelExamEdit() {
     editingExamId = '';
     setExamFormMode(false);
+    alarmAuto = true; suggestDefaultAlarmTime();
     document.getElementById('ex-syllabus').value = '';
     syncExamFormUI();
     renderExamManageList();
@@ -2371,7 +2527,9 @@
     document.getElementById('ex-title').value = ex.title || '';
     document.getElementById('ex-subject').value = ex.subject || 'Higher Mathematics';
     document.getElementById('ex-datetime').value = String(ex.dateTime || '').slice(0, 16);
-    if (document.getElementById('ex-alarm-time')) document.getElementById('ex-alarm-time').value = String(ex.alarmTime || '').slice(0, 16);
+    alarmAuto = !ex.alarmTime;                                   // load the saved alarm time instead of overwriting it
+    document.getElementById('ex-alarm-time').value = ex.alarmTime ? String(ex.alarmTime).slice(0, 16) : '';
+    suggestDefaultAlarmTime();
     document.getElementById('ex-cq-max').value = Number(ex.cqMax) || '';
     document.getElementById('ex-mcq-max').value = Number(ex.mcqMax) || '';
     document.getElementById('ex-prac-max').value = Number(ex.pracMax) || '';
@@ -2391,7 +2549,7 @@
       if (!ex) { cancelExamEdit(); return; }
       Object.assign(ex, f);
       saveState(); pushToSheet({ action: 'updateExam', exam: examForServer(ex) });
-      if (document.getElementById('ex-send-alarm') && document.getElementById('ex-send-alarm').checked) armAlarm(ex); else if (typeof CoachingBridge !== 'undefined' && CoachingBridge.cancelExamAlarm) { try { CoachingBridge.cancelExamAlarm(ex.id); } catch (_) {} }
+      if (!document.getElementById('ex-send-alarm') || document.getElementById('ex-send-alarm').checked) armAlarm(ex); else cancelAlarm(ex.id);   // unticked = no alarm any more
       const keepId = ex.id;
       cancelExamEdit(); renderAll();
       document.getElementById('select-exam-marks').value = keepId;
@@ -2402,8 +2560,9 @@
     const ex = Object.assign({ id: nextExamId(), scores: {} }, f);
     state.exams.unshift(ex);
     saveState(); pushToSheet({ action: 'postExam', exam: examForServer(ex) });
-    if (document.getElementById('ex-send-alarm') && document.getElementById('ex-send-alarm').checked) armAlarm(ex); else if (typeof CoachingBridge !== 'undefined' && CoachingBridge.cancelExamAlarm) { try { CoachingBridge.cancelExamAlarm(ex.id); } catch (_) {} }
+    if (document.getElementById('ex-send-alarm') && document.getElementById('ex-send-alarm').checked) armAlarm(ex);
     document.getElementById('ex-syllabus').value = '';
+    alarmAuto = true; suggestDefaultAlarmTime();
     syncExamFormUI(); renderAll();
     document.getElementById('select-exam-marks').value = ex.id;
     renderExamsTab(filteredStudents());
@@ -2445,6 +2604,7 @@
     const b = document.getElementById('filter-branch').value;
     const c = document.getElementById('filter-class').value;
     const sl = document.getElementById('filter-slot').value;
+    if (c === 'ALL') { showToast('Pick the class in the filter bar first'); return; }
     const now = new Date();
     const pad = n => String(n).padStart(2, '0');
     const nowIso = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) + 'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
@@ -2452,7 +2612,7 @@
       id: nextExamId(),
       title: topic,
       subject: (document.getElementById('ex-subject') ? document.getElementById('ex-subject').value.trim() : '') || 'Higher Mathematics',
-      classYear: c === 'ALL' ? 'HSC 1st Year' : c,
+      classYear: c,
       type: qType,
       dateTime: nowIso,
       alarmTime: '',
@@ -2484,10 +2644,12 @@
     rows.forEach(inp => {
       const sid = inp.dataset.markId;
       const part = inp.dataset.part || 'cq';
+      if (inp.value === '') return;                                // not entered = leave the saved mark alone
       if (!byStudent[sid]) byStudent[sid] = Object.assign({ cq: 0, mcq: 0, prac: 0 }, (exam.scores && exam.scores[sid]) || {});
       byStudent[sid][part] = Number(inp.value) || 0;
     });
     exam.scores = exam.scores || {};
+    if (!Object.keys(byStudent).length) { showToast('No marks typed yet'); return; }
     const entries = Object.keys(byStudent).map(sid => {
       exam.scores[sid] = byStudent[sid];
       return { studentId: sid, cq: byStudent[sid].cq || 0, mcq: byStudent[sid].mcq || 0, prac: byStudent[sid].prac || 0 };
@@ -2509,8 +2671,9 @@
     if (!exam || !s) return;
 
     const rowInputs = document.querySelectorAll(`#marks-entry-list input[data-mark-id="${sid}"][data-exam-id="${eid}"]`);
+    exam.scores = exam.scores || {};
     const sc = exam.scores[sid] || { cq: 0, mcq: 0, prac: 0 };
-    rowInputs.forEach(inp => { sc[inp.dataset.part || 'cq'] = Number(inp.value) || 0; });
+    rowInputs.forEach(inp => { if (inp.value !== '') sc[inp.dataset.part || 'cq'] = Number(inp.value) || 0; });
     exam.scores[sid] = sc;
     saveState();
     pushToSheet({ action: 'saveMark', examId: eid, studentId: sid, cq: sc.cq || 0, mcq: sc.mcq || 0, prac: sc.prac || 0 });
@@ -2528,10 +2691,11 @@
     if (!showCq && !showMcq && !showPrac) showCq = true;
     const total = (showCq ? (Number(sc.cq) || 0) : 0) + (showMcq ? (Number(sc.mcq) || 0) : 0) + (showPrac ? (Number(sc.prac) || 0) : 0);
     const maxTotal = (showCq ? (Number(exam.cqMax) || 0) : 0) + (showMcq ? (Number(exam.mcqMax) || 0) : 0) + (showPrac ? (Number(exam.pracMax) || 0) : 0);
-    const msg = `Abrar Math Coaching Result (${esc(exam.title)}): ${esc(s.name)} (${esc(s.id)}) scored ${total}/${maxTotal}.`;
+    const msg = `Abrar Math Coaching Result (${exam.title}): ${s.name} (${s.id}) scored ${total}/${maxTotal}.`;   // plain text: waUrl() encodes it
     window.open(waUrl(s.guardianWa, msg), '_blank', 'noopener,noreferrer');
   });
 
+  const markTimers = {};
   document.getElementById('marks-entry-list').addEventListener('input', e => {
     const sid = e.target.dataset.markId, eid = e.target.dataset.examId;
     if (!sid || !eid) return;
@@ -2540,9 +2704,16 @@
     exam.scores = exam.scores || {};
     const part = e.target.dataset.part || 'cq';
     const prev = exam.scores[sid] || { cq: 0, mcq: 0, prac: 0 };
+    if (e.target.value === '') return;                           // blank is not a mark
     prev[part] = Number(e.target.value) || 0;
     exam.scores[sid] = prev;
     saveState(); renderStudentView();
+    const k = eid + '|' + sid;                                   // upload once typing pauses, not on every digit
+    clearTimeout(markTimers[k]);
+    markTimers[k] = setTimeout(() => {
+      const ex2 = state.exams.find(x => x.id === eid), sc2 = ex2 && ex2.scores && ex2.scores[sid];
+      if (sc2) pushToSheet({ action: 'saveMark', examId: eid, studentId: sid, cq: sc2.cq || 0, mcq: sc2.mcq || 0, prac: sc2.prac || 0 });
+    }, 900);
   });
 
   document.getElementById('btn-stu-admission-pdf').addEventListener('click', () => showAdmissionPdf(document.getElementById('student-portal-select').value));
@@ -2678,6 +2849,8 @@
   let regPhotoDataUrl = '';
   document.getElementById('btn-open-stu-register').addEventListener('click', () => {
     regPhotoDataUrl = '';
+    document.getElementById('reg-photo-preview').src = REG_BLANK;
+    document.getElementById('reg-joining').value = document.getElementById('reg-joining').value || curMonth();
     syncSlotDropdowns();
     document.getElementById('modal-stu-register').classList.remove('hidden');
   });
@@ -2716,7 +2889,7 @@
 
   syncExamFormUI();
   renderAll();
-const _n = new Date(Date.now() + 3600000), _p = x => String(x).padStart(2,'0'); document.getElementById('ntc-datetime').value = _n.getFullYear()+'-'+_p(_n.getMonth()+1)+'-'+_p(_n.getDate())+'T'+_p(_n.getHours())+':00';
+document.getElementById('ntc-datetime').value = nowLocalIso(60);
   document.getElementById('ntc-branch').addEventListener('change', syncSlotDropdowns);
   document.getElementById('form-post-notice').addEventListener('submit', e => {
     e.preventDefault();
@@ -2737,6 +2910,7 @@ const _n = new Date(Date.now() + 3600000), _p = x => String(x).padStart(2,'0'); 
       try { CoachingBridge.scheduleNoticeAlarm(n.id, n.title, n.dateTime); } catch (_) {}
     }
     e.target.reset();
+    document.getElementById('ntc-datetime').value = nowLocalIso(60);
     renderAll();
     showToast('Notice posted & alarm armed');
   });
@@ -2747,9 +2921,7 @@ const _n = new Date(Date.now() + 3600000), _p = x => String(x).padStart(2,'0'); 
     state.notices = (state.notices || []).filter(n => n.id !== delId);
     saveState();
     pushToSheet({ action: 'deleteNotice', noticeId: delId });
-    if (typeof CoachingBridge !== 'undefined' && CoachingBridge.cancelExamAlarm) {
-      try { CoachingBridge.cancelExamAlarm(delId); } catch (_) {}
-    }
+    cancelNoticeAlarmFor(delId);
     renderAll();
     showToast('Notice removed');
   });
